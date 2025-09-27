@@ -1,3 +1,53 @@
+/**
+ * AGENT CLASS - Individual Swarm Entity
+ *
+ * PURPOSE:
+ * - Represents single autonomous agent in swarm system
+ * - Handles movement, physics, battery management, and state updates
+ * - Core building block for multi-agent coordination
+ *
+ * MAIN COMPONENTS:
+ * 1. AgentState - Current agent status and properties
+ * 2. MovementCommand Queue - Thread-safe command processing
+ * 3. PhysicsEngine - Movement and collision handling
+ * 4. Update Loop - 30-60 FPS simulation cycle
+ *
+ * CORE FUNCTIONS:
+ * 1. update(deltaTime) - Main simulation loop called each frame
+ * 2. addMovementCommand() - Queue new movement instructions
+ * 3. getState() - Access current agent state
+ * 4. processCommands() - Execute queued movement commands
+ * 5. updatePhysics() - Position/velocity integration
+ * 6. updateBattery() - Power consumption simulation
+ *
+ * UPDATE CYCLE LOGIC (called 30-60 times/second):
+ * 1. Process pending movement commands from queue
+ * 2. Update physics (position based on velocity)
+ * 3. Update battery level based on movement
+ * 4. Update timestamp and publish state changes
+ *
+ * MOVEMENT EXECUTION:
+ * - Commands processed in FIFO order from thread-safe queue
+ * - Switch statement handles different MovementTypes
+ * - Physics engine enforces speed limits and boundaries
+ * - Collision detection with world boundaries (bounce effect)
+ *
+ * BATTERY SIMULATION:
+ * - Consumption rate proportional to speed
+ * - Low battery (< 20%) triggers BATTERY_LOW status
+ * - Formula: consumption = (speed/maxSpeed) * 0.001 * deltaTime
+ *
+ * EXPECTED OUTPUTS:
+ * - Console: "Agent 1 at (150.5, 200.3) battery: 0.85"
+ * - State updates: position changes based on velocity
+ * - Status changes: ACTIVE -> BATTERY_LOW when power < 20%
+ * - Boundary handling: velocity reversal when hitting walls
+ *
+ * THREAD SAFETY:
+ * - Command queue is ConcurrentLinkedQueue (thread-safe)
+ * - State access should be synchronized externally if needed
+ * - Update method should only be called from simulation thread
+ */
 // src/main/java/com/team6/swarm/core/Agent.java
 package com.team6.swarm.core;
 
