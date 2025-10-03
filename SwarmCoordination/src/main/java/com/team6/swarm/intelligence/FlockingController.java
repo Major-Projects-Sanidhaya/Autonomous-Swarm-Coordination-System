@@ -1,112 +1,150 @@
 /**
- * FLOCKING CONTROLLER CLASS - Swarm Intelligence Core
+ * FLOCKINGCONTROLLER CLASS - Reynolds Flocking Algorithm Implementation
  *
  * PURPOSE:
- * - Implements collective swarm behaviors using Reynolds flocking algorithm
- * - Processes neighbor information to generate coordinated movement commands
- * - Core intelligence system that creates emergent group behavior from simple rules
+ * - Implements three fundamental flocking rules (separation, alignment, cohesion)
+ * - Transforms individual agents into coordinated swarm through local rules
+ * - Creates emergent group behavior from simple neighbor interactions
  *
- * MAIN COMPONENTS:
- * 1. Three Flocking Rules - Separation, Alignment, Cohesion
- * 2. Force Calculation - Weighted combination of behavioral forces
- * 3. Neighbor Analysis - Distance-based behavioral zone detection
- * 4. Movement Command Generation - Converts forces to actionable commands
+ * THE THREE FLOCKING RULES:
  *
- * CORE FUNCTIONS:
- * 1. calculateFlocking() - Main entry point for flocking behavior
- * 2. calculateSeparation() - Collision avoidance with nearby agents
- * 3. calculateAlignment() - Velocity matching with local neighbors
- * 4. calculateCohesion() - Attraction toward group center
- * 5. combineForces() - Weighted force integration
+ * 1. SEPARATION - Don't get too close to neighbors
+ *    Algorithm:
+ *    - Find all neighbors within separationRadius
+ *    - For each neighbor calculate vector pointing away
+ *    - Weight by inverse distance (closer = stronger push)
+ *    - Sum all repulsion vectors
+ *    - Result: Force pushing away from crowded areas
  *
- * FLOCKING ALGORITHM LOGIC:
- * 1. Analyze all neighbors within communication range
- * 2. Apply separation force (avoid collisions) - highest priority
- * 3. Apply alignment force (match neighbor velocities) - medium priority  
- * 4. Apply cohesion force (move toward group center) - lowest priority
- * 5. Combine forces with configurable weights
- * 6. Generate MovementCommand with resulting force vector
+ * 2. ALIGNMENT - Move in same direction as neighbors  
+ *    Algorithm:
+ *    - Find all neighbors within alignmentRadius
+ *    - Average their velocity vectors
+ *    - Calculate difference from own velocity
+ *    - Result: Force to match group direction
+ *
+ * 3. COHESION - Stay with the group
+ *    Algorithm:
+ *    - Find all neighbors within cohesionRadius
+ *    - Calculate average position (group center of mass)
+ *    - Calculate direction toward center
+ *    - Result: Force pulling toward group
+ *
+ * FORCE COMBINATION:
+ * totalForce = (separation * separationWeight) + 
+ *              (alignment * alignmentWeight) +
+ *              (cohesion * cohesionWeight)
  *
  * BEHAVIORAL ZONES:
- * - Separation Zone (0-30 units): Repulsion force, avoid collisions
- * - Alignment Zone (30-50 units): Velocity matching with neighbors
- * - Cohesion Zone (50-80 units): Attraction toward group center
- * - Communication Range (0-100 units): Maximum neighbor detection
+ * - Zone 1 (0-30 units): Separation dominates - avoid collisions
+ * - Zone 2 (30-50 units): Alignment active - match velocities
+ * - Zone 3 (50-80 units): Cohesion active - stay with group
+ * - Zone 4 (80+ units): Outside influence - no flocking forces
  *
- * FORCE CALCULATION:
- * - Forces are normalized Vector2D objects (magnitude 0-1)
- * - Distance weighting: closer neighbors have stronger influence
- * - Default weights: Separation=1.5, Alignment=1.0, Cohesion=1.0
- * - Final force clamped to prevent extreme velocities
- *
- * EXPECTED OUTPUTS:
- * - MovementCommand with FLOCKING_BEHAVIOR type
- * - Force vectors pointing away from crowded areas
- * - Smooth group movement without oscillation
- * - Console: "Flocking: Sep(0.3,0.1) Align(-0.2,0.4) Cohes(0.1,-0.2)"
+ * WHAT MAKES GOOD FLOCKING:
+ * - Smooth, natural-looking movement patterns
+ * - No jittery or oscillating behavior
+ * - Group maintains cohesion without collisions
+ * - Adapts fluidly to obstacles and boundaries
+ * - Emergent coordination without central control
  *
  * INTEGRATION POINTS:
  * - Receives: NeighborInfo from John's communication system
- * - Receives: AgentCapabilities from Sanidhaya's agent system  
- * - Sends: MovementCommand to Sanidhaya for execution
- * - Sends: Debug info to Anthony's visualization system
+ * - Receives: FlockingParameters for tunable weights
+ * - Sends: MovementCommand to Sanidhaya's agent system
+ * - Sends: Performance metrics to Anthony's monitoring
  */
-// src/main/java/com/team6/swarm/intelligence/FlockingController.java
 package com.team6.swarm.intelligence;
 
 import com.team6.swarm.core.*;
 import java.util.List;
-import java.util.ArrayList;
-import java.util.HashMap;
 
 public class FlockingController {
-    // Behavioral zone radii - tuned for realistic flocking
-    private static final double SEPARATION_RADIUS = 30.0;
-    private static final double ALIGNMENT_RADIUS = 50.0; 
-    private static final double COHESION_RADIUS = 80.0;
-    
-    // Force weights - separation prioritized for collision avoidance
-    private static final double SEPARATION_WEIGHT = 1.5;
-    private static final double ALIGNMENT_WEIGHT = 1.0;
-    private static final double COHESION_WEIGHT = 1.0;
+    // Configuration parameters - use external FlockingParameters object
+    private FlockingParameters parameters;
     
     // Performance tracking
     private long lastCalculationTime;
     private int calculationsPerformed;
+    private double averageCalculationTime;
     
     /**
-     * Main flocking calculation - called by system for each agent
+     * Constructor with default parameters
+     */
+    public FlockingController() {
+        this.parameters = new FlockingParameters();
+        this.lastCalculationTime = 0;
+        this.calculationsPerformed = 0;
+        this.averageCalculationTime = 0.0;
+    }
+    
+    /**
+     * Constructor with custom parameters
+     */
+    public FlockingController(FlockingParameters parameters) {
+        this.parameters = parameters;
+        this.lastCalculationTime = 0;
+        this.calculationsPerformed = 0;
+        this.averageCalculationTime = 0.0;
+    }
+    
+    /**
+     * MAIN FLOCKING CALCULATION
+     * 
+     * This is the core method called by the system for each agent each frame.
+     * Combines three flocking rules into single movement command.
+     *
      * @param agentId - ID of agent requesting flocking behavior
      * @param currentState - Agent's current position and velocity
      * @param neighbors - List of nearby agents within communication range
      * @return MovementCommand containing combined flocking forces
      */
-    public MovementCommand calculateFlocking(int agentId, AgentState currentState, List<NeighborInfo> neighbors) {
+    public MovementCommand calculateFlocking(int agentId, AgentState currentState, 
+                                           List<NeighborInfo> neighbors) {
         long startTime = System.currentTimeMillis();
         
-        // Calculate individual behavioral forces
+        // Calculate the three fundamental flocking forces
         Vector2D separationForce = calculateSeparation(currentState.position, neighbors);
         Vector2D alignmentForce = calculateAlignment(currentState.velocity, neighbors);
         Vector2D cohesionForce = calculateCohesion(currentState.position, neighbors);
         
-        // Combine forces with weights
+        // Combine forces with configured weights
         Vector2D combinedForce = combineForces(separationForce, alignmentForce, cohesionForce);
         
-        // Create movement command
+        // Limit force magnitude to maxForce parameter
+        if (combinedForce.magnitude() > parameters.maxForce) {
+            combinedForce = normalize(combinedForce);
+            combinedForce = multiply(combinedForce, parameters.maxForce);
+        }
+        
+        // Create movement command for agent
         MovementCommand command = createFlockingCommand(agentId, combinedForce);
         
         // Update performance metrics
         updatePerformanceMetrics(startTime);
         
-        // Debug output
+        // Debug logging (every 30th calculation to avoid spam)
         logFlockingCalculation(agentId, separationForce, alignmentForce, cohesionForce);
         
         return command;
     }
     
     /**
-     * Separation behavior - avoid collisions with nearby agents
-     * Creates repulsion force away from agents within separation radius
+     * SEPARATION RULE IMPLEMENTATION
+     * "Don't get too close to neighbors"
+     *
+     * Algorithm Details:
+     * 1. Examine each neighbor within separationRadius
+     * 2. Calculate repulsion vector (away from neighbor)
+     * 3. Weight by inverse distance:
+     *    - Closer neighbors = stronger repulsion
+     *    - Formula: repulsionStrength = 1.0 / distance
+     * 4. Sum all weighted repulsion vectors
+     * 5. Normalize to unit vector (direction only)
+     *
+     * @param myPosition - Current agent position
+     * @param neighbors - List of nearby agents
+     * @return Normalized separation force vector
      */
     private Vector2D calculateSeparation(Point2D myPosition, List<NeighborInfo> neighbors) {
         Vector2D steerForce = new Vector2D(0, 0);
@@ -114,23 +152,30 @@ public class FlockingController {
         
         // Examine each neighbor for separation requirements
         for (NeighborInfo neighbor : neighbors) {
-            if (neighbor.distance < SEPARATION_RADIUS && neighbor.distance > 0) {
-                // Calculate repulsion vector (away from neighbor)
-                Vector2D repulsionVector = new Vector2D(
+            double distance = neighbor.distance;
+            
+            // Only process neighbors within separation zone
+            if (distance < parameters.separationRadius && distance > 0) {
+                // Calculate vector pointing away from neighbor
+                Vector2D awayVector = new Vector2D(
                     myPosition.x - neighbor.position.x,
                     myPosition.y - neighbor.position.y
                 );
                 
-                // Weight by inverse distance - closer = stronger repulsion
-                repulsionVector = normalize(repulsionVector);
-                repulsionVector = multiply(repulsionVector, 1.0 / neighbor.distance);
+                // Normalize to unit vector (direction only)
+                awayVector = normalize(awayVector);
                 
-                steerForce = add(steerForce, repulsionVector);
+                // Weight by inverse distance - closer neighbors push harder
+                double weight = 1.0 / distance;
+                awayVector = multiply(awayVector, weight);
+                
+                // Accumulate repulsion forces
+                steerForce = add(steerForce, awayVector);
                 neighborCount++;
             }
         }
         
-        // Average and normalize the separation force
+        // Average the separation force if neighbors found
         if (neighborCount > 0) {
             steerForce = divide(steerForce, neighborCount);
             steerForce = normalize(steerForce);
@@ -140,24 +185,44 @@ public class FlockingController {
     }
     
     /**
-     * Alignment behavior - match velocities with nearby agents
-     * Creates steering force toward average neighbor velocity
+     * ALIGNMENT RULE IMPLEMENTATION
+     * "Move in same direction as neighbors"
+     *
+     * Algorithm Details:
+     * 1. Find all neighbors within alignmentRadius
+     * 2. Average their velocity vectors
+     * 3. Calculate steering force toward average velocity
+     * 4. Normalize to unit vector
+     *
+     * This creates coordinated group movement where all agents
+     * gradually match their velocities.
+     *
+     * @param myVelocity - Current agent velocity
+     * @param neighbors - List of nearby agents
+     * @return Normalized alignment force vector
      */
     private Vector2D calculateAlignment(Vector2D myVelocity, List<NeighborInfo> neighbors) {
         Vector2D averageVelocity = new Vector2D(0, 0);
         int neighborCount = 0;
         
         // Calculate average velocity of neighbors in alignment zone
+        // Note: Alignment zone is BETWEEN separation and cohesion radii
         for (NeighborInfo neighbor : neighbors) {
-            if (neighbor.distance < ALIGNMENT_RADIUS && neighbor.distance > SEPARATION_RADIUS) {
+            double distance = neighbor.distance;
+            
+            if (distance < parameters.alignmentRadius && 
+                distance >= parameters.separationRadius) {
                 averageVelocity = add(averageVelocity, neighbor.velocity);
                 neighborCount++;
             }
         }
         
-        // Generate steering force toward average velocity
+        // Calculate steering force toward average velocity
         if (neighborCount > 0) {
             averageVelocity = divide(averageVelocity, neighborCount);
+            
+            // Desired velocity is the average
+            // Steering force = desired - current
             Vector2D steerForce = subtract(averageVelocity, myVelocity);
             return normalize(steerForce);
         }
@@ -166,28 +231,50 @@ public class FlockingController {
     }
     
     /**
-     * Cohesion behavior - move toward center of nearby group
-     * Creates attraction force toward average neighbor position
+     * COHESION RULE IMPLEMENTATION
+     * "Stay with the group"
+     *
+     * Algorithm Details:
+     * 1. Find all neighbors within cohesionRadius
+     * 2. Calculate their center of mass (average position)
+     * 3. Calculate direction vector toward center
+     * 4. Normalize to unit vector
+     *
+     * This creates attraction toward group center, keeping
+     * the swarm together as a cohesive unit.
+     *
+     * @param myPosition - Current agent position
+     * @param neighbors - List of nearby agents
+     * @return Normalized cohesion force vector
      */
     private Vector2D calculateCohesion(Point2D myPosition, List<NeighborInfo> neighbors) {
         Vector2D centerOfMass = new Vector2D(0, 0);
         int neighborCount = 0;
         
         // Calculate center of mass for neighbors in cohesion zone
+        // Note: Cohesion zone is BEYOND alignment radius
         for (NeighborInfo neighbor : neighbors) {
-            if (neighbor.distance < COHESION_RADIUS && neighbor.distance > ALIGNMENT_RADIUS) {
-                centerOfMass = add(centerOfMass, new Vector2D(neighbor.position.x, neighbor.position.y));
+            double distance = neighbor.distance;
+            
+            if (distance < parameters.cohesionRadius && 
+                distance >= parameters.alignmentRadius) {
+                centerOfMass = add(centerOfMass, 
+                    new Vector2D(neighbor.position.x, neighbor.position.y));
                 neighborCount++;
             }
         }
         
-        // Generate steering force toward group center
+        // Calculate steering force toward group center
         if (neighborCount > 0) {
+            // Average position = center of mass
             centerOfMass = divide(centerOfMass, neighborCount);
+            
+            // Direction toward center
             Vector2D steerForce = new Vector2D(
                 centerOfMass.x - myPosition.x,
                 centerOfMass.y - myPosition.y
             );
+            
             return normalize(steerForce);
         }
         
@@ -195,55 +282,63 @@ public class FlockingController {
     }
     
     /**
-     * Combine behavioral forces with configurable weights
-     * Applies force priorities and limits final magnitude
+     * FORCE COMBINATION
+     * Applies weights to each behavioral force and combines them
+     *
+     * Formula:
+     * total = (separation * separationWeight) +
+     *         (alignment * alignmentWeight) +
+     *         (cohesion * cohesionWeight)
+     *
+     * Higher weight = stronger influence of that behavior
      */
     private Vector2D combineForces(Vector2D separation, Vector2D alignment, Vector2D cohesion) {
-        // Apply weights to individual forces
-        Vector2D weightedSeparation = multiply(separation, SEPARATION_WEIGHT);
-        Vector2D weightedAlignment = multiply(alignment, ALIGNMENT_WEIGHT);
-        Vector2D weightedCohesion = multiply(cohesion, COHESION_WEIGHT);
+        // Apply configured weights to each force component
+        Vector2D weightedSeparation = multiply(separation, parameters.separationWeight);
+        Vector2D weightedAlignment = multiply(alignment, parameters.alignmentWeight);
+        Vector2D weightedCohesion = multiply(cohesion, parameters.cohesionWeight);
         
-        // Combine all forces
+        // Sum all weighted forces
         Vector2D totalForce = add(add(weightedSeparation, weightedAlignment), weightedCohesion);
-        
-        // Normalize to prevent extreme forces
-        if (totalForce.magnitude() > 1.0) {
-            totalForce = normalize(totalForce);
-        }
         
         return totalForce;
     }
     
     /**
      * Create MovementCommand from calculated flocking force
+     * Converts force vector into format Sanidhaya's system understands
      */
     private MovementCommand createFlockingCommand(int agentId, Vector2D force) {
         MovementCommand command = new MovementCommand();
         command.agentId = agentId;
         command.type = MovementType.FLOCKING_BEHAVIOR;
-        // Note: CommandPriority doesn't exist yet, will be added later
         command.parameters.put("combinedForce", force);
-        command.parameters.put("separationWeight", SEPARATION_WEIGHT);
-        command.parameters.put("alignmentWeight", ALIGNMENT_WEIGHT);
-        command.parameters.put("cohesionWeight", COHESION_WEIGHT);
+        command.parameters.put("separationWeight", parameters.separationWeight);
+        command.parameters.put("alignmentWeight", parameters.alignmentWeight);
+        command.parameters.put("cohesionWeight", parameters.cohesionWeight);
         
         return command;
     }
     
     /**
      * Update performance tracking metrics
+     * Tracks calculation time for optimization analysis
      */
     private void updatePerformanceMetrics(long startTime) {
         lastCalculationTime = System.currentTimeMillis() - startTime;
         calculationsPerformed++;
+        
+        // Calculate running average
+        averageCalculationTime = (averageCalculationTime * (calculationsPerformed - 1) + 
+                                  lastCalculationTime) / calculationsPerformed;
     }
     
     /**
      * Debug logging for flocking calculations
+     * Only logs every 30th calculation to avoid console spam
      */
     private void logFlockingCalculation(int agentId, Vector2D sep, Vector2D align, Vector2D cohes) {
-        if (calculationsPerformed % 30 == 0) { // Log every 30th calculation to avoid spam
+        if (calculationsPerformed % 30 == 0) {
             System.out.println(String.format(
                 "Agent %d Flocking: Sep(%.2f,%.2f) Align(%.2f,%.2f) Cohes(%.2f,%.2f)",
                 agentId, sep.x, sep.y, align.x, align.y, cohes.x, cohes.y
@@ -252,12 +347,11 @@ public class FlockingController {
     }
     
     // ==================== VECTOR MATH UTILITIES ====================
-    // These are your mathematical foundation - all flocking depends on these
     
     private Vector2D normalize(Vector2D vector) {
-        double magnitude = vector.magnitude();
-        if (magnitude > 0) {
-            return new Vector2D(vector.x / magnitude, vector.y / magnitude);
+        double mag = vector.magnitude();
+        if (mag > 0) {
+            return new Vector2D(vector.x / mag, vector.y / mag);
         }
         return new Vector2D(0, 0);
     }
@@ -281,6 +375,25 @@ public class FlockingController {
         return new Vector2D(0, 0);
     }
     
+    // ==================== PARAMETER MANAGEMENT ====================
+    
+    /**
+     * Update flocking parameters at runtime
+     * Allows dynamic tuning from Anthony's UI
+     */
+    public void updateParameters(FlockingParameters newParameters) {
+        if (newParameters.validate()) {
+            this.parameters = newParameters;
+            System.out.println("Flocking parameters updated: " + newParameters);
+        } else {
+            System.err.println("Invalid flocking parameters rejected");
+        }
+    }
+    
+    public FlockingParameters getParameters() {
+        return this.parameters;
+    }
+    
     // ==================== PERFORMANCE MONITORING ====================
     
     public long getLastCalculationTime() {
@@ -291,16 +404,31 @@ public class FlockingController {
         return calculationsPerformed;
     }
     
+    public double getAverageCalculationTime() {
+        return averageCalculationTime;
+    }
+    
     public void resetPerformanceMetrics() {
         calculationsPerformed = 0;
         lastCalculationTime = 0;
+        averageCalculationTime = 0.0;
     }
 }
 
 // ==================== SUPPORTING DATA STRUCTURES ====================
 
 /**
- * Information about neighboring agents for flocking calculations
+ * NEIGHBORINFO CLASS - Information about nearby agents
+ *
+ * PURPOSE:
+ * - Packages neighbor data for flocking calculations
+ * - Provided by John's communication system
+ * - Contains position, velocity, and distance information
+ *
+ * USAGE:
+ * - FlockingController receives list of NeighborInfo
+ * - Each represents one agent within communication range
+ * - Distance pre-calculated by communication system for efficiency
  */
 class NeighborInfo {
     public Point2D position;

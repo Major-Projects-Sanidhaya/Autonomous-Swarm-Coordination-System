@@ -1,191 +1,298 @@
 /**
- * VOTING SYSTEM CLASS - Distributed Democratic Decision Making
+ * VOTINGSYSTEM CLASS - Week 2 Democratic Decision Making
  *
  * PURPOSE:
- * - Enables agents to vote collectively on mission-critical decisions
+ * - Manages complete voting lifecycle from proposal to execution
  * - Implements consensus algorithms for distributed swarm coordination
- * - Manages proposal lifecycle from initiation to execution
- *
- * MAIN COMPONENTS:
- * 1. Proposal Management - Create, track, and close voting proposals
- * 2. Vote Collection - Gather and validate agent votes
- * 3. Consensus Detection - Determine when sufficient agreement reached
- * 4. Result Execution - Apply winning decisions to swarm behavior
- *
- * CORE FUNCTIONS:
- * 1. initiateVote() - Create new proposal and broadcast to agents
- * 2. processVote() - Record individual agent vote responses
- * 3. checkConsensus() - Evaluate if voting threshold met
- * 4. executeResult() - Apply winning decision to system
- * 5. expireProposals() - Clean up old/stale votes
+ * - Handles vote collection, counting, and result determination
  *
  * VOTING LIFECYCLE:
- * 1. Agent or system creates proposal (e.g., "Go left or right?")
- * 2. Proposal broadcast to all agents via communication system
- * 3. Agents respond with their preferred choice
- * 4. System tracks responses and calculates percentages
- * 5. When consensus threshold reached (60%), execute winning choice
- * 6. Proposal expires after timeout or completion
  *
- * CONSENSUS ALGORITHM:
- * - Simple Majority: Requires 60% agreement for decision
- * - Timeout Protection: Proposals expire after 10 seconds
- * - Quorum Requirements: Minimum 3 agents must participate
- * - Tie Handling: Default to first option or status quo
+ * 1. INITIATE VOTE
+ *    - Create VoteProposal with question and options
+ *    - Set deadline and minimum votes
+ *    - Broadcast to all agents (via John's system when ready)
+ *    - Track proposal in active votes map
  *
- * PROPOSAL TYPES:
- * - NAVIGATION: Path selection around obstacles
- * - FORMATION: Change swarm formation pattern  
- * - MISSION: Accept/reject new mission assignments
- * - EMERGENCY: Immediate danger response protocols
+ * 2. COLLECT VOTES
+ *    - Agents receive proposal
+ *    - Each agent creates VoteResponse
+ *    - Responses sent back through communication
+ *    - Store responses and validate them
  *
- * EXPECTED OUTPUTS:
- * - Console: "Vote initiated: 'Navigate around obstacle' - LEFT vs RIGHT"
- * - Console: "Agent 3 voted LEFT (4/7 total votes)"
- * - Console: "CONSENSUS REACHED: LEFT wins with 71% (5/7 votes)"
- * - OutgoingMessage broadcasts for proposals and results
+ * 3. CHECK CONSENSUS
+ *    - Count votes for each option
+ *    - Calculate percentages
+ *    - Check if threshold met (e.g., 60% agreement)
+ *    - Handle special cases (tie, timeout, unanimous)
+ *
+ * 4. DETERMINE RESULT
+ *    - Create VoteResult with outcome
+ *    - Include detailed breakdown
+ *    - Set winning option if consensus reached
+ *    - Explain failure if no consensus
+ *
+ * 5. EXECUTE DECISION
+ *    - If consensus: implement winning option
+ *    - If no consensus: apply fallback strategy
+ *    - Update system state
+ *    - Broadcast result to all agents
+ *
+ * CONSENSUS ALGORITHMS:
+ *
+ * SIMPLE MAJORITY (50%+):
+ * - Most votes wins
+ * - Quick decisions
+ * - Routine operations
+ *
+ * SUPERMAJORITY (60-67%):
+ * - Strong agreement required
+ * - Important decisions
+ * - Formation changes, path selection
+ *
+ * UNANIMOUS (100%):
+ * - All agents must agree
+ * - Critical safety decisions
+ * - Mission aborts, emergency responses
+ *
+ * WEIGHTED VOTING:
+ * - Expert opinions weighted higher
+ * - Proximity to problem matters
+ * - Battery level affects weight
+ * - Confidence scores considered
+ *
+ * TIMEOUT HANDLING:
+ *
+ * If not all votes received by deadline:
+ * - Calculate consensus with available votes
+ * - If threshold met: proceed with decision
+ * - If threshold not met: apply fallback
+ * - Fallback options:
+ *   * Leader decides
+ *   * Status quo (no change)
+ *   * Revote with modified options
+ *   * Fail-safe default
+ *
+ * TIE BREAKING:
+ *
+ * If multiple options have equal votes:
+ * - Leader decides (most common)
+ * - First option wins (predetermined)
+ * - Random selection
+ * - Revote with only tied options
+ * - Status quo (no change)
+ *
+ * EXAMPLE WORKFLOW:
+ *
+ * Obstacle Navigation:
+ * 1. Obstacle detected at (300, 250)
+ * 2. Create proposal: "Go left or right?"
+ * 3. Broadcast to 7 agents
+ * 4. Collect responses over 5 seconds
+ * 5. Results: LEFT=5, RIGHT=2
+ * 6. Consensus: 71% for LEFT (> 60% threshold)
+ * 7. Execute: All agents navigate left
  *
  * INTEGRATION POINTS:
- * - Receives: VoteResponse messages from John's communication system
- * - Receives: ProposalRequest from system events or user interface
- * - Sends: VoteProposal broadcasts via OutgoingMessage to John
- * - Sends: DecisionResult to Anthony's visualization system
+ * - Receives: VoteResponse from agents (via John)
+ * - Sends: VoteProposal broadcasts (via John when ready)
+ * - Sends: VoteResult notifications
+ * - Sends: DecisionStatus to Anthony's UI
+ * - Uses: VotingParameters for configuration
  */
-// src/main/java/com/team6/swarm/intelligence/VotingSystem.java
 package com.team6.swarm.intelligence;
 
-import com.team6.swarm.core.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class VotingSystem {
-    // Consensus configuration
-    private static final double CONSENSUS_THRESHOLD = 0.60; // 60% agreement required
-    private static final int MINIMUM_QUORUM = 3; // Minimum voters for valid decision
-    private static final long PROPOSAL_TIMEOUT_MS = 10000; // 10 second timeout
+    // Configuration
+    private VotingParameters parameters;
     
     // Active voting data
-    private Map<String, VoteProposal> activeProposals;
-    private Map<String, Map<Integer, String>> voteResponses; // proposalId -> (agentId -> choice)
-    private Map<String, Long> proposalTimestamps;
+    private final Map<String, VoteProposal> activeProposals;
+    private final Map<String, Map<Integer, VoteResponse>> voteResponses;
+    private final Map<String, Long> proposalTimestamps;
     
-    // System integration
-    private Object communicationManager; // Will be CommunicationManager when John implements it
+    // Communication integration (placeholder until John implements)
+    //private final Object communicationManager;
+    
+    // Proposal ID generation
     private int nextProposalId;
     
     // Performance tracking
     private int totalVotesProcessed;
-    private int consensusReached;
-    private List<VoteResult> recentDecisions;
+    private int consensusReachedCount;
+    private int consensusFailedCount;
+    private final List<VoteResult> recentDecisions;
     
-    public VotingSystem(Object communicationManager) {
-        this.communicationManager = communicationManager;
+    /**
+     * Constructor with default voting parameters
+     */
+    public VotingSystem() {
+        this.parameters = new VotingParameters();
         this.activeProposals = new ConcurrentHashMap<>();
         this.voteResponses = new ConcurrentHashMap<>();
         this.proposalTimestamps = new ConcurrentHashMap<>();
+        //this.communicationManager = null;  // Will be set when John's system ready
         this.nextProposalId = 1;
+        this.totalVotesProcessed = 0;
+        this.consensusReachedCount = 0;
+        this.consensusFailedCount = 0;
         this.recentDecisions = new ArrayList<>();
     }
     
     /**
-     * Main voting initiation - creates proposal and broadcasts to swarm
-     * @param question - Human readable question (e.g., "Navigate around obstacle?")
-     * @param options - Available choices (e.g., ["LEFT", "RIGHT"])
-     * @param proposalType - Category of decision being made
+     * Constructor with custom parameters
+     */
+    public VotingSystem(VotingParameters parameters) {
+        this.parameters = parameters;
+        this.activeProposals = new ConcurrentHashMap<>();
+        this.voteResponses = new ConcurrentHashMap<>();
+        this.proposalTimestamps = new ConcurrentHashMap<>();
+        //this.communicationManager = null;
+        this.nextProposalId = 1;
+        this.totalVotesProcessed = 0;
+        this.consensusReachedCount = 0;
+        this.consensusFailedCount = 0;
+        this.recentDecisions = new ArrayList<>();
+    }
+    
+    /**
+     * INITIATE VOTE
+     * Creates proposal and broadcasts to swarm
+     *
+     * @param question Human-readable question
+     * @param options List of possible choices
+     * @param proposalType Category of decision
      * @return proposalId for tracking this vote
      */
-    public String initiateVote(String question, List<String> options, ProposalType proposalType) {
+    public String initiateVote(String question, List<String> options, 
+                              ProposalType proposalType) {
         // Generate unique proposal ID
-        String proposalId = "VOTE_" + nextProposalId++;
+        String proposalId = "vote_" + String.format("%03d", nextProposalId++);
         
         // Create proposal object
-        VoteProposal proposal = new VoteProposal();
-        proposal.proposalId = proposalId;
-        proposal.question = question;
-        proposal.options = new ArrayList<>(options);
+        VoteProposal proposal = new VoteProposal(proposalId, question, options);
         proposal.proposalType = proposalType;
-        proposal.initiatorId = -1; // System initiated
-        proposal.timestamp = System.currentTimeMillis();
+        proposal.deadline = System.currentTimeMillis() + parameters.votingTimeout;
+        proposal.minimumVotes = parameters.minimumQuorum;
+        proposal.requiresUnanimous = parameters.requireUnanimous;
+        
+        // Validate proposal
+        if (!proposal.validate()) {
+            System.err.println("Invalid proposal rejected: " + proposalId);
+            return null;
+        }
         
         // Store proposal data
         activeProposals.put(proposalId, proposal);
         voteResponses.put(proposalId, new ConcurrentHashMap<>());
         proposalTimestamps.put(proposalId, System.currentTimeMillis());
         
-        // Broadcast to all agents
+        // Broadcast to all agents (placeholder until John's system ready)
         broadcastProposal(proposal);
         
         // Log initiation
-        System.out.println(String.format("Vote initiated: '%s' - %s", 
-                          question, String.join(" vs ", options)));
+        System.out.println("Vote initiated: " + proposal);
         
         return proposalId;
     }
     
     /**
-     * Process individual agent vote - called when vote message received
-     * @param proposalId - Which vote this response is for
-     * @param agentId - Which agent is voting
-     * @param choice - Agent's selected option
+     * PROCESS VOTE
+     * Records individual agent vote response
+     *
+     * @param response Vote from an agent
      */
-    public void processVote(String proposalId, int agentId, String choice) {
+    public void processVote(VoteResponse response) {
         // Validate proposal exists and is active
-        if (!activeProposals.containsKey(proposalId)) {
-            System.out.println("Warning: Vote received for unknown proposal " + proposalId);
+        if (!activeProposals.containsKey(response.proposalId)) {
+            System.out.println("Warning: Vote for unknown proposal " + response.proposalId);
             return;
         }
         
-        VoteProposal proposal = activeProposals.get(proposalId);
+        VoteProposal proposal = activeProposals.get(response.proposalId);
         
-        // Validate choice is valid option
-        if (!proposal.options.contains(choice)) {
-            System.out.println("Warning: Invalid vote choice '" + choice + "' for proposal " + proposalId);
+        // Validate response against proposal
+        if (!response.validate(proposal)) {
+            System.out.println("Warning: Invalid vote rejected - " + response);
             return;
+        }
+        
+        // Check if revoting allowed
+        Map<Integer, VoteResponse> responses = voteResponses.get(response.proposalId);
+        if (responses.containsKey(response.voterId) && !parameters.allowRevoting) {
+            System.out.println("Warning: Revoting not allowed for agent " + response.voterId);
+            return;
+        }
+        
+        // Calculate vote weight if weighted voting enabled
+        if (parameters.useWeightedVoting) {
+            response.calculateWeight(proposal, null);  // problemLocation can be added later
         }
         
         // Record the vote
-        voteResponses.get(proposalId).put(agentId, choice);
+        responses.put(response.voterId, response);
         totalVotesProcessed++;
         
         // Log vote received
-        Map<Integer, String> currentVotes = voteResponses.get(proposalId);
-        System.out.println(String.format("Agent %d voted %s (%d/%d total votes)", 
-                          agentId, choice, currentVotes.size(), getCurrentSwarmSize()));
+        System.out.println(String.format("  %s (%d/%d votes)",
+            response.getVoteDescription(), responses.size(), getCurrentSwarmSize()));
         
         // Check if consensus reached
-        VoteResult result = checkConsensus(proposalId);
+        VoteResult result = checkConsensus(response.proposalId);
         if (result.consensusReached) {
             executeVoteResult(result);
         }
     }
     
     /**
-     * Consensus detection - determines if enough votes received for decision
-     * @param proposalId - Which proposal to check
-     * @return VoteResult with consensus status and winning choice
+     * CHECK CONSENSUS
+     * Determines if voting threshold met
+     *
+     * @param proposalId Which proposal to check
+     * @return VoteResult with consensus status
      */
     public VoteResult checkConsensus(String proposalId) {
         VoteProposal proposal = activeProposals.get(proposalId);
-        Map<Integer, String> votes = voteResponses.get(proposalId);
+        Map<Integer, VoteResponse> responses = voteResponses.get(proposalId);
         
-        if (proposal == null || votes == null) {
-            return new VoteResult(proposalId, false, null, "Proposal not found");
+        if (proposal == null || responses == null) {
+            return new VoteResult(proposalId, false, null, 
+                "Proposal not found");
         }
         
         // Count votes for each option
         Map<String, Integer> voteCounts = new HashMap<>();
+        Map<String, Double> weightedVoteCounts = new HashMap<>();
+        List<Integer> voters = new ArrayList<>();
+        
         for (String option : proposal.options) {
             voteCounts.put(option, 0);
+            weightedVoteCounts.put(option, 0.0);
         }
         
-        for (String vote : votes.values()) {
-            voteCounts.put(vote, voteCounts.get(vote) + 1);
+        // Tally votes
+        for (VoteResponse response : responses.values()) {
+            if (response.isAbstention() && !parameters.allowAbstention) {
+                continue;  // Skip abstentions if not allowed
+            }
+            
+            voteCounts.put(response.choice, voteCounts.get(response.choice) + 1);
+            
+            if (parameters.useWeightedVoting) {
+                double current = weightedVoteCounts.get(response.choice);
+                weightedVoteCounts.put(response.choice, current + response.calculatedWeight);
+            }
+            
+            voters.add(response.voterId);
         }
         
         // Find option with most votes
         String winningOption = null;
         int maxVotes = 0;
-        int totalVotes = votes.size();
+        int totalVotes = responses.size();
         
         for (Map.Entry<String, Integer> entry : voteCounts.entrySet()) {
             if (entry.getValue() > maxVotes) {
@@ -194,27 +301,65 @@ public class VotingSystem {
             }
         }
         
-        // Check consensus requirements
-        boolean hasQuorum = totalVotes >= MINIMUM_QUORUM;
-        boolean hasConsensus = maxVotes >= Math.ceil(totalVotes * CONSENSUS_THRESHOLD);
-        boolean consensusReached = hasQuorum && hasConsensus;
+        // Calculate consensus level
+        double consensusLevel = totalVotes > 0 ? (double) maxVotes / totalVotes : 0.0;
         
-        if (consensusReached) {
-            double percentage = (double) maxVotes / totalVotes * 100;
-            String reason = String.format("%s wins with %.0f%% (%d/%d votes)", winningOption, percentage, maxVotes, totalVotes);
-            return new VoteResult(proposalId, true, winningOption, reason);
+        // Check consensus requirements
+        boolean hasQuorum = totalVotes >= proposal.minimumVotes;
+        boolean meetsThreshold = consensusLevel >= parameters.consensusThreshold;
+        boolean isUnanimous = (consensusLevel == 1.0);
+        
+        // Determine if consensus reached
+        boolean consensusReached = hasQuorum && meetsThreshold;
+        
+        if (proposal.requiresUnanimous) {
+            consensusReached = hasQuorum && isUnanimous;
         }
         
-        return new VoteResult(proposalId, false, null, 
-                            String.format("No consensus: need %d%% agreement, have %d/%d votes", 
-                                        (int)(CONSENSUS_THRESHOLD * 100), maxVotes, totalVotes));
+        // Create result object
+        VoteResult result = new VoteResult(
+            proposalId, consensusReached, 
+            consensusReached ? winningOption : null,
+            consensusLevel,
+            generateResultReason(consensusReached, winningOption, maxVotes, totalVotes, consensusLevel),
+            voteCounts, voters, totalVotes, 
+            proposal.minimumVotes, parameters.consensusThreshold
+        );
+        
+        result.wasUnanimous = isUnanimous;
+        result.wasTimeout = proposal.hasExpired();
+        result.weightedVoteBreakdown = weightedVoteCounts;
+        
+        return result;
     }
     
     /**
-     * Execute winning vote decision - apply result to swarm behavior
+     * Generate human-readable result reason
+     */
+    private String generateResultReason(boolean consensusReached, String winningOption,
+                                        int maxVotes, int totalVotes, double consensusLevel) {
+        if (consensusReached) {
+            double percentage = consensusLevel * 100;
+            return String.format("%s wins with %.0f%% (%d/%d votes)",
+                winningOption, percentage, maxVotes, totalVotes);
+        } else {
+            double percentage = consensusLevel * 100;
+            double required = parameters.consensusThreshold * 100;
+            return String.format("No consensus: need %.0f%% agreement, best option has %.0f%% (%d/%d votes)",
+                required, percentage, maxVotes, totalVotes);
+        }
+    }
+    
+    /**
+     * EXECUTE VOTE RESULT
+     * Implements the democratic decision
      */
     private void executeVoteResult(VoteResult result) {
-        System.out.println("CONSENSUS REACHED: " + result.reason);
+        System.out.println();
+        System.out.println("========================================");
+        System.out.println("CONSENSUS REACHED: " + result.getSummaryMessage());
+        System.out.println("========================================");
+        System.out.println(result.getDetailedBreakdown());
         
         // Remove from active proposals
         VoteProposal proposal = activeProposals.remove(result.proposalId);
@@ -223,117 +368,199 @@ public class VotingSystem {
         
         // Store in recent decisions
         recentDecisions.add(result);
-        consensusReached++;
-        
-        // Execute the decision based on proposal type
-        switch (proposal.proposalType) {
-            case NAVIGATION:
-                executeNavigationDecision(result.winningChoice);
-                break;
-            case FORMATION:
-                executeFormationDecision(result.winningChoice);
-                break;
-            case MISSION:
-                executeMissionDecision(result.winningChoice);
-                break;
-            case EMERGENCY:
-                executeEmergencyDecision(result.winningChoice);
-                break;
+        if (recentDecisions.size() > 20) {
+            recentDecisions.remove(0);  // Keep only last 20
         }
         
-        // Broadcast result to all agents
+        consensusReachedCount++;
+        
+        // Execute the decision based on proposal type
+        if (proposal != null) {
+            executeDecision(proposal, result);
+        }
+        
+        // Broadcast result to all agents (placeholder)
         broadcastVoteResult(result);
     }
     
     /**
-     * Clean up expired proposals that haven't reached consensus
+     * Execute specific decision based on type
+     */
+    private void executeDecision(VoteProposal proposal, VoteResult result) {
+        System.out.println("Executing decision: " + proposal.proposalType + 
+                          " -> " + result.winningOption);
+        
+        switch (proposal.proposalType) {
+            case NAVIGATION:
+                executeNavigationDecision(result.winningOption);
+                break;
+            case FORMATION:
+                executeFormationDecision(result.winningOption);
+                break;
+            case MISSION:
+                executeMissionDecision(result.winningOption);
+                break;
+            case EMERGENCY:
+                executeEmergencyDecision(result.winningOption);
+                break;
+            case COORDINATION:
+                executeCoordinationDecision(result.winningOption);
+                break;
+        }
+    }
+    
+    // Decision execution methods (to be implemented in integration)
+    private void executeNavigationDecision(String direction) {
+        System.out.println("  → Navigation: Swarm moving " + direction);
+        // Will integrate with FlockingController and movement system
+    }
+    
+    private void executeFormationDecision(String decision) {
+        System.out.println("  → Formation: " + decision);
+        // Will integrate with FormationController (Week 4)
+    }
+    
+    private void executeMissionDecision(String decision) {
+        System.out.println("  → Mission: " + decision);
+        // Will integrate with TaskAllocator (Week 3)
+    }
+    
+    private void executeEmergencyDecision(String response) {
+        System.out.println("  → EMERGENCY: " + response);
+        // Critical response execution
+    }
+    
+    private void executeCoordinationDecision(String decision) {
+        System.out.println("  → Coordination: " + decision);
+        // Timing and synchronization
+    }
+    
+    /**
+     * EXPIRE PROPOSALS
+     * Clean up votes that timed out without consensus
      */
     public void expireProposals() {
-        long currentTime = System.currentTimeMillis();
+        // long currentTime = System.currentTimeMillis(); TODO: needs to be utilized
         List<String> expiredIds = new ArrayList<>();
         
-        for (Map.Entry<String, Long> entry : proposalTimestamps.entrySet()) {
-            if (currentTime - entry.getValue() > PROPOSAL_TIMEOUT_MS) {
+        for (Map.Entry<String, VoteProposal> entry : activeProposals.entrySet()) {
+            if (entry.getValue().hasExpired()) {
                 expiredIds.add(entry.getKey());
             }
         }
         
         for (String proposalId : expiredIds) {
-            System.out.println("Proposal " + proposalId + " expired without consensus");
+            VoteResult result = checkConsensus(proposalId);
+            result.wasTimeout = true;
+            
+            if (!result.consensusReached) {
+                System.out.println("Proposal " + proposalId + " expired: " + result.reason);
+                consensusFailedCount++;
+                
+                // Apply timeout fallback
+                applyTimeoutFallback(activeProposals.get(proposalId), result);
+            }
+            
+            // Cleanup
             activeProposals.remove(proposalId);
             voteResponses.remove(proposalId);
             proposalTimestamps.remove(proposalId);
+            recentDecisions.add(result);
         }
     }
     
-    // ==================== DECISION EXECUTION METHODS ====================
-    
-    private void executeNavigationDecision(String direction) {
-        System.out.println("Executing navigation decision: " + direction);
-        // This would integrate with your flocking controller
-        // For example: FlockingController.setAvoidanceDirection(direction);
+    /**
+     * Apply fallback strategy when vote times out
+     */
+    private void applyTimeoutFallback(VoteProposal proposal, VoteResult result) {
+        System.out.println("Applying timeout fallback: " + parameters.timeoutFallback);
+        
+        switch (parameters.timeoutFallback) {
+            case LEADER_DECIDES:
+                System.out.println("  → Leader will decide");
+                break;
+            case STATUS_QUO:
+                System.out.println("  → Maintaining current state");
+                break;
+            case FAIL_SAFE:
+                System.out.println("  → Choosing safest option");
+                break;
+            case RANDOM_CHOICE:
+                String randomChoice = proposal.options.get(
+                    (int)(Math.random() * proposal.options.size()));
+                System.out.println("  → Random selection: " + randomChoice);
+                break;
+            case REVOTE:
+                System.out.println("  → Initiating revote");
+                // Could trigger new vote here
+                break;
+        }
     }
     
-    private void executeFormationDecision(String formation) {
-        System.out.println("Executing formation change: " + formation);
-        // This would trigger formation controller
-    }
-    
-    private void executeMissionDecision(String decision) {
-        System.out.println("Executing mission decision: " + decision);
-        // This would update mission parameters
-    }
-    
-    private void executeEmergencyDecision(String response) {
-        System.out.println("Executing emergency response: " + response);
-        // This would trigger emergency protocols
-    }
-    
-    // ==================== COMMUNICATION INTEGRATION ====================
-    
+    // Communication integration (placeholders until John's system ready)
     private void broadcastProposal(VoteProposal proposal) {
-        // TODO: This will use John's CommunicationManager when available
-        // For now, just log the broadcast
+        // TODO: Use John's CommunicationManager when available
         System.out.println("Broadcasting proposal: " + proposal.proposalId);
-        
-        /* Future implementation with John's system:
-        OutgoingMessage message = new OutgoingMessage();
-        message.senderId = -1; // System message
-        message.receiverId = -1; // Broadcast to all
-        message.priority = MessagePriority.HIGH;
-        message.messageContent = new Message();
-        message.messageContent.type = MessageType.VOTE_PROPOSAL;
-        message.messageContent.payload = proposal;
-        message.messageContent.timestamp = System.currentTimeMillis();
-        
-        communicationManager.sendMessage(message);
-        */
     }
     
     private void broadcastVoteResult(VoteResult result) {
-        // TODO: This will use John's CommunicationManager when available
-        System.out.println("Broadcasting vote result: " + result.reason);
-        
-        /* Future implementation with John's system:
-        OutgoingMessage message = new OutgoingMessage();
-        message.senderId = -1; // System message
-        message.receiverId = -1; // Broadcast to all
-        message.priority = MessagePriority.HIGH;
-        message.messageContent = new Message();
-        message.messageContent.type = MessageType.VOTE_RESULT;
-        message.messageContent.payload = result;
-        message.messageContent.timestamp = System.currentTimeMillis();
-        
-        communicationManager.sendMessage(message);
-        */
+        // TODO: Use John's CommunicationManager when available
+        System.out.println("Broadcasting result: " + result.proposalId);
     }
     
-    // ==================== UTILITY METHODS ====================
-    
+    // Utility methods
     private int getCurrentSwarmSize() {
-        // This would integrate with Sanidhya's agent system
-        // For now, estimate based on recent vote participation
-        return 7; // Placeholder
+        // TODO: Get actual swarm size from Sanidhya's system
+        return 7;  // Placeholder
+    }
+    
+    // ==================== PARAMETER MANAGEMENT ====================
+    
+    /**
+     * Update voting parameters at runtime
+     */
+    public void updateParameters(VotingParameters newParameters) {
+        if (newParameters.validate()) {
+            this.parameters = newParameters;
+            System.out.println("Voting parameters updated: " + newParameters);
+        } else {
+            System.err.println("Invalid voting parameters rejected");
+        }
+    }
+    
+    public VotingParameters getParameters() {
+        return this.parameters;
+    }
+    
+    // ==================== QUERY METHODS ====================
+    
+    /**
+     * Get all active proposals
+     */
+    public Map<String, VoteProposal> getActiveProposals() {
+        return new HashMap<>(activeProposals);
+    }
+    
+    /**
+     * Get recent vote results (last 20)
+     */
+    public List<VoteResult> getRecentDecisions() {
+        return new ArrayList<>(recentDecisions);
+    }
+    
+    /**
+     * Get specific proposal by ID
+     */
+    public VoteProposal getProposal(String proposalId) {
+        return activeProposals.get(proposalId);
+    }
+    
+    /**
+     * Get current votes for specific proposal
+     */
+    public Map<Integer, VoteResponse> getVotesForProposal(String proposalId) {
+        Map<Integer, VoteResponse> votes = voteResponses.get(proposalId);
+        return votes != null ? new HashMap<>(votes) : new HashMap<>();
     }
     
     // ==================== PERFORMANCE MONITORING ====================
@@ -342,44 +569,22 @@ public class VotingSystem {
         return totalVotesProcessed;
     }
     
-    public int getConsensusReached() {
-        return consensusReached;
+    public int getConsensusReachedCount() {
+        return consensusReachedCount;
     }
     
-    public List<VoteResult> getRecentDecisions() {
-        return new ArrayList<>(recentDecisions);
+    public int getConsensusFailedCount() {
+        return consensusFailedCount;
     }
     
-    public Map<String, VoteProposal> getActiveProposals() {
-        return new HashMap<>(activeProposals);
+    public double getConsensusSuccessRate() {
+        int total = consensusReachedCount + consensusFailedCount;
+        return total > 0 ? (double) consensusReachedCount / total : 0.0;
     }
-}
-
-// ==================== SUPPORTING DATA STRUCTURES ====================
-
-class VoteProposal {
-    public String proposalId;
-    public String question;
-    public List<String> options;
-    public ProposalType proposalType;
-    public int initiatorId;
-    public long timestamp;
-}
-
-class VoteResult {
-    public String proposalId;
-    public boolean consensusReached;
-    public String winningChoice;
-    public String reason;
     
-    public VoteResult(String proposalId, boolean consensusReached, String winningChoice, String reason) {
-        this.proposalId = proposalId;
-        this.consensusReached = consensusReached;
-        this.winningChoice = winningChoice;
-        this.reason = reason;
+    public void resetPerformanceMetrics() {
+        totalVotesProcessed = 0;
+        consensusReachedCount = 0;
+        consensusFailedCount = 0;
     }
-}
-
-enum ProposalType {
-    NAVIGATION, FORMATION, MISSION, EMERGENCY
 }
