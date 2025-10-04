@@ -220,7 +220,7 @@ public class VoteProposal {
         proposal.proposalType = ProposalType.EMERGENCY;
         proposal.deadline = System.currentTimeMillis() + 10000;
         proposal.requiresUnanimous = true;  // Critical decisions need full agreement
-        proposal.minimumVotes = 3;        // TODO: Wanted initially all agents to vote, but this breaks things because it was just set to 999 which isnt helpful
+        proposal.minimumVotes = 3;        // TODO: Ideally, minimumVotes should equal the total number of agents to ensure unanimous participation. However, setting this to a fixed high value (e.g., 999) is not practical. Consider implementing a mechanism to dynamically set minimumVotes based on the current agent count.
         
         return proposal;
     }
