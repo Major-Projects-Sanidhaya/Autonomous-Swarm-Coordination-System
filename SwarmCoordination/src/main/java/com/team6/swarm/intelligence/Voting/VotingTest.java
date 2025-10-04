@@ -223,7 +223,7 @@ public class VotingTest {
           System.out.println("  ✓ PASS: Unanimous decision test, consensus reached with 100% consensus level");
         System.out.println();
         } else {
-          System.out.println("  ✓ FAIL: Unanimous decision test, conditions not met");
+          System.out.println("  ✗ FAIL: Unanimous decision test, conditions not met");
         System.out.println();
         }
     }
