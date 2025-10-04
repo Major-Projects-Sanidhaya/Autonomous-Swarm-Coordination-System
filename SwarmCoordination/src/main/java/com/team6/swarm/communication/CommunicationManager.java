@@ -1,51 +1,5 @@
 /**
- * COMMUNICATIONMANAGER CLASS - Central Communication Hub
- *
- * PURPOSE:
- * - Central hub that manages all communication in the swarm
- * - Coordinates network topology, message routing, and delivery
- * - Provides interface between agents and communication system
- *
- * CORE RESPONSIBILITIES:
- * 1. Network Topology Management - Track which agents can communicate
- * 2. Message Routing - Deliver messages between agents
- * 3. Neighbor Discovery - Maintain neighbor relationships
- * 4. Network Simulation - Apply realistic network conditions
- * 5. Message History - Track recent messages for debugging
- *
- * KEY COMPONENTS:
- * - networkTopology: Map of agent ID to NeighborInformation
- * - messageQueue: Priority queue for pending messages
- * - networkSimulator: Network physics simulation
- * - messageHistory: Recent messages for analysis
- * - agentPositions: Current positions of all agents
- *
- * MESSAGE FLOW:
- * 1. Receive OutgoingMessage from Lauren/Agent
- * 2. Check if direct delivery possible (in range?)
- * 3. If not, find multi-hop route (if enabled)
- * 4. Apply network simulation (delays, failures)
- * 5. Create IncomingMessage for delivery
- * 6. Notify recipient of message arrival
- *
- * NETWORK TOPOLOGY UPDATES:
- * - Called whenever agent positions change
- * - Recalculates distances between all agents
- * - Updates neighbor relationships
- * - Notifies when topology changes
- *
- * USAGE EXAMPLES:
- * - CommunicationManager manager = new CommunicationManager();
- * - manager.updateTopology(agentStates);
- * - manager.sendMessage(outgoingMessage);
- * - NeighborInformation neighbors = manager.getNeighbors(agentId);
- * - List<ConnectionInfo> connections = manager.getActiveConnections();
- *
- * INTEGRATION POINTS:
- * - Lauren: Sends messages, receives neighbor information
- * - Sanidhaya: Provides agent position updates
- * - Anthony: Receives connection information for visualization
- * - NetworkSimulator: Uses for realistic network conditions
+ * Central communication hub for swarm coordination
  */
 package com.team6.swarm.communication;
 
@@ -78,26 +32,17 @@ public class CommunicationManager {
         this.maxHistorySize = 1000;
     }
     
-    /**
-     * Update network topology based on current agent positions
-     * Called whenever agent positions change
-     */
     public void updateTopology(List<AgentState> allAgents) {
-        // Update agent positions
         for (AgentState agent : allAgents) {
             agentPositions.put(agent.agentId, agent.position);
         }
         
-        // Recalculate neighbor relationships for each agent
         for (AgentState agent : allAgents) {
             NeighborInformation neighbors = calculateNeighbors(agent.agentId, allAgents);
             networkTopology.put(agent.agentId, neighbors);
         }
     }
     
-    /**
-     * Calculate neighbors for a specific agent
-     */
     private NeighborInformation calculateNeighbors(int agentId, List<AgentState> allAgents) {
         List<NeighborAgent> neighbors = new ArrayList<>();
         Point2D agentPosition = agentPositions.get(agentId);
@@ -112,15 +57,12 @@ public class CommunicationManager {
             Point2D otherPosition = otherAgent.position;
             double distance = agentPosition.distanceTo(otherPosition);
             
-            // Check if in communication range
             if (networkSimulator.canCommunicate(distance, networkSimulator.getCommunicationRange())) {
-                double signalStrength = networkSimulator.calculateSignalStrength(
-                    distance, networkSimulator.getCommunicationRange());
+                double signalStrength = networkSimulator.calculateSignalStrength(distance, networkSimulator.getCommunicationRange());
                 boolean canCommunicate = signalStrength >= 0.3;
                 
                 NeighborAgent neighbor = new NeighborAgent(
-                    otherAgent.agentId, distance, signalStrength, 
-                    canCommunicate, System.currentTimeMillis());
+                    otherAgent.agentId, distance, signalStrength, canCommunicate, System.currentTimeMillis());
                 neighbors.add(neighbor);
             }
         }
@@ -128,9 +70,6 @@ public class CommunicationManager {
         return new NeighborInformation(agentId, neighbors);
     }
     
-    /**
-     * Send a message (add to queue for processing)
-     */
     public boolean sendMessage(OutgoingMessage message) {
         if (message.isExpired()) {
             return false;
@@ -139,10 +78,6 @@ public class CommunicationManager {
         return messageQueue.offer(message);
     }
     
-    /**
-     * Process pending messages in the queue
-     * Called regularly by the simulation loop
-     */
     public void processMessages() {
         while (!messageQueue.isEmpty()) {
             OutgoingMessage message = messageQueue.poll();
@@ -152,9 +87,6 @@ public class CommunicationManager {
         }
     }
     
-    /**
-     * Deliver a message to its destination
-     */
     private void deliverMessage(OutgoingMessage message) {
         if (message.isBroadcast()) {
             deliverBroadcast(message);
@@ -163,67 +95,47 @@ public class CommunicationManager {
         }
     }
     
-    /**
-     * Deliver a direct message to a specific agent
-     */
     private void deliverDirect(OutgoingMessage message) {
         Point2D senderPos = agentPositions.get(message.senderId);
         Point2D receiverPos = agentPositions.get(message.receiverId);
         
         if (senderPos == null || receiverPos == null) {
-            return; // Agent not found
+            return;
         }
         
         double distance = senderPos.distanceTo(receiverPos);
-        
-        // Simulate delivery
-        NetworkSimulator.DeliveryResult result = networkSimulator.simulateDelivery(
-            distance, networkSimulator.getCommunicationRange());
+        NetworkSimulator.DeliveryResult result = networkSimulator.simulateDelivery(distance, networkSimulator.getCommunicationRange());
         
         if (result.willDeliver) {
-            // Create delivery receipt
             List<Integer> routePath = new ArrayList<>();
             IncomingMessage incoming = new IncomingMessage(
                 message.receiverId, message.senderId, message.messageContent, 
                 routePath, result.signalStrength);
             
-            // Add to history
             addToHistory(incoming);
-            
-            // Notify recipient (in real implementation, this would trigger an event)
             System.out.println("Delivered message: " + incoming);
         } else {
             System.out.println("Message delivery failed: " + message);
         }
     }
     
-    /**
-     * Deliver a broadcast message to all neighbors
-     */
     private void deliverBroadcast(OutgoingMessage message) {
         NeighborInformation neighbors = networkTopology.get(message.senderId);
         if (neighbors == null) return;
         
         for (NeighborAgent neighbor : neighbors.getCommunicatingNeighbors()) {
-            // Create individual message for each neighbor
             OutgoingMessage individualMessage = new OutgoingMessage(
                 message.senderId, neighbor.neighborId, message.messageContent, 
-                message.priority, message.maxHops, message.expirationTime);
+                message.priority, message.maxHops, message.expirationTime - System.currentTimeMillis());
             
             deliverDirect(individualMessage);
         }
     }
     
-    /**
-     * Get neighbor information for a specific agent
-     */
     public NeighborInformation getNeighbors(int agentId) {
         return networkTopology.get(agentId);
     }
     
-    /**
-     * Get all active connections for visualization
-     */
     public List<ConnectionInfo> getActiveConnections() {
         List<ConnectionInfo> connections = new ArrayList<>();
         
@@ -240,9 +152,6 @@ public class CommunicationManager {
         return connections;
     }
     
-    /**
-     * Get network statistics
-     */
     public NetworkStatistics getNetworkStatistics() {
         int totalAgents = networkTopology.size();
         int totalConnections = 0;
@@ -265,40 +174,25 @@ public class CommunicationManager {
                                    averageSignalStrength, isolatedAgents);
     }
     
-    /**
-     * Add message to history (with size limit)
-     */
     private void addToHistory(IncomingMessage message) {
         messageHistory.add(message);
         if (messageHistory.size() > maxHistorySize) {
-            messageHistory.remove(0); // Remove oldest
+            messageHistory.remove(0);
         }
     }
     
-    /**
-     * Get recent message history
-     */
     public List<IncomingMessage> getMessageHistory() {
         return new ArrayList<>(messageHistory);
     }
     
-    /**
-     * Get pending message count
-     */
     public int getPendingMessageCount() {
         return messageQueue.size();
     }
     
-    /**
-     * Clear all pending messages
-     */
     public void clearPendingMessages() {
         messageQueue.clear();
     }
     
-    /**
-     * Network statistics container
-     */
     public static class NetworkStatistics {
         public final int totalAgents;
         public final int totalConnections;
