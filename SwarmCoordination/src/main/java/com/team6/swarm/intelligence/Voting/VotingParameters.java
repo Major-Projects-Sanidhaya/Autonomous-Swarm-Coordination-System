@@ -173,7 +173,8 @@ public class VotingParameters {
         params.requireUnanimous = true;
         params.consensusThreshold = 1.0;
         params.votingTimeout = 10000;
-        params.minimumQuorum = 3;  // THIS CANNOT BE SET TO MORE AGENTS THAN THERE ACTUALLY ARE BECAUSE THAT MAKES IT SO THAT THEY CAN NEVER REACH CONSENSUS
+        // Ensure minimumQuorum does not exceed the number of available agents, or consensus may never be reached.
+        params.minimumQuorum = 3;
         params.allowAbstention = false;
         params.leaderOverride = true;
         params.timeoutFallback = TimeoutFallback.LEADER_DECIDES;
