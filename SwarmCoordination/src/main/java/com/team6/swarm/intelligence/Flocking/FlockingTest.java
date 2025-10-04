@@ -43,9 +43,10 @@
  * ✓ Agents respond to flocking forces
  * ✓ Beautiful coordinated movement emerges
  */
-package com.team6.swarm.intelligence;
+package com.team6.swarm.intelligence.Flocking;
 
 import com.team6.swarm.core.*;
+
 import java.util.List;
 import java.util.ArrayList;
 

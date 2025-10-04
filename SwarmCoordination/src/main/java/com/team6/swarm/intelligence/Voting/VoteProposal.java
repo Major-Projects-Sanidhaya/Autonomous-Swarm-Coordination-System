@@ -80,7 +80,7 @@
  * - Stored in: Active proposals map
  * - Results in: VoteResult object
  */
-package com.team6.swarm.intelligence;
+package com.team6.swarm.intelligence.Voting;
 
 import java.util.List;
 import java.util.ArrayList;

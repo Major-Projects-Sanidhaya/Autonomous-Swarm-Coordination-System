@@ -100,7 +100,7 @@
  * - Sends: DecisionStatus to Anthony's UI
  * - Uses: VotingParameters for configuration
  */
-package com.team6.swarm.intelligence;
+package com.team6.swarm.intelligence.Voting;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;

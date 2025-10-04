@@ -58,7 +58,7 @@
  * - Modified by: Anthony's UI sliders for runtime tuning
  * - Read by: All flocking behavior methods
  */
-package com.team6.swarm.intelligence;
+package com.team6.swarm.intelligence.Flocking;
 
 public class FlockingParameters {
     // Separation parameters - collision avoidance

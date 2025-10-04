@@ -48,9 +48,11 @@
  * ✓ Result execution
  * ✓ Performance metrics
  */
-package com.team6.swarm.intelligence;
+package com.team6.swarm.intelligence.Voting;
 
 import com.team6.swarm.core.Point2D;
+import com.team6.swarm.intelligence.Flocking.BehaviorType;
+
 import java.util.Arrays;
 import java.util.List;
 
