@@ -115,7 +115,7 @@ public class VotingSystem {
     private final Map<String, Long> proposalTimestamps;
     
     // Communication integration (placeholder until John implements)
-    //private final Object communicationManager;
+    private final Object communicationManager;
     
     // Proposal ID generation
     private int nextProposalId;
@@ -134,7 +134,7 @@ public class VotingSystem {
         this.activeProposals = new ConcurrentHashMap<>();
         this.voteResponses = new ConcurrentHashMap<>();
         this.proposalTimestamps = new ConcurrentHashMap<>();
-        //this.communicationManager = null;  // Will be set when John's system ready
+        this.communicationManager = null;  // Will be set when John's system ready
         this.nextProposalId = 1;
         this.totalVotesProcessed = 0;
         this.consensusReachedCount = 0;
@@ -150,7 +150,7 @@ public class VotingSystem {
         this.activeProposals = new ConcurrentHashMap<>();
         this.voteResponses = new ConcurrentHashMap<>();
         this.proposalTimestamps = new ConcurrentHashMap<>();
-        //this.communicationManager = null;
+        this.communicationManager = null;
         this.nextProposalId = 1;
         this.totalVotesProcessed = 0;
         this.consensusReachedCount = 0;
@@ -202,6 +202,7 @@ public class VotingSystem {
     /**
      * PROCESS VOTE
      * Records individual agent vote response
+     * Note: Does NOT check consensus immediately - waits for timeout
      *
      * @param response Vote from an agent
      */
@@ -240,11 +241,8 @@ public class VotingSystem {
         System.out.println(String.format("  %s (%d/%d votes)",
             response.getVoteDescription(), responses.size(), getCurrentSwarmSize()));
         
-        // Check if consensus reached
-        VoteResult result = checkConsensus(response.proposalId);
-        if (result.consensusReached) {
-            executeVoteResult(result);
-        }
+        // DO NOT check consensus here - wait for timeout to collect all votes
+        // Consensus will be checked when expireProposals() is called
     }
     
     /**
@@ -440,7 +438,7 @@ public class VotingSystem {
      * Clean up votes that timed out without consensus
      */
     public void expireProposals() {
-        // long currentTime = System.currentTimeMillis(); TODO: needs to be utilized
+        long currentTime = System.currentTimeMillis();
         List<String> expiredIds = new ArrayList<>();
         
         for (Map.Entry<String, VoteProposal> entry : activeProposals.entrySet()) {

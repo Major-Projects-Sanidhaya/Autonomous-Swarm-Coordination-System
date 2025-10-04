@@ -220,7 +220,7 @@ public class VoteProposal {
         proposal.proposalType = ProposalType.EMERGENCY;
         proposal.deadline = System.currentTimeMillis() + 10000;
         proposal.requiresUnanimous = true;  // Critical decisions need full agreement
-        proposal.minimumVotes = 999;        // All agents must vote
+        proposal.minimumVotes = 3;        // TODO: Wanted initially all agents to vote, but this breaks things because it was just set to 999 which isnt helpful
         
         return proposal;
     }

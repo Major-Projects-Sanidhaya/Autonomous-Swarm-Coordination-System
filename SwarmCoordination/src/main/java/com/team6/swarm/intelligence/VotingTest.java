@@ -58,7 +58,7 @@ public class VotingTest {
     
     public static void main(String[] args) {
         System.out.println("========================================");
-        System.out.println("VOTING SYSTEM TEST");
+        System.out.println("WEEK 2: VOTING SYSTEM TEST");
         System.out.println("========================================");
         System.out.println();
         
@@ -72,7 +72,7 @@ public class VotingTest {
         
         System.out.println();
         System.out.println("========================================");
-        System.out.println("All voting tests completed!");
+        System.out.println("All Week 2 tests completed!");
         System.out.println("========================================");
     }
     
@@ -97,14 +97,29 @@ public class VotingTest {
         
         // Simulate 7 agents voting: 5 LEFT, 2 RIGHT
         System.out.println("Collecting votes:");
-        voting.processVote(new VoteResponse(proposalId, 1, "LEFT", 0.9, "Left path clearer", null, 0.8/* , BehaviorType.SCOUT TODO: revisit once adding BehaviorType*/));
-        voting.processVote(new VoteResponse(proposalId, 2, "LEFT", 0.8, "Agree with scout", null, 0.9/* , BehaviorType.FLOCKING TODO: revisit once adding BehaviorType*/));
-        voting.processVote(new VoteResponse(proposalId, 3, "RIGHT", 0.7, "Right seems safer", null, 0.7/* , BehaviorType.GUARD TODO: revisit once adding BehaviorType*/));
-        voting.processVote(new VoteResponse(proposalId, 4, "LEFT", 1.0, "Left is optimal", null, 1.0/* , BehaviorType.LEADER TODO: revisit once adding BehaviorType*/));
-        voting.processVote(new VoteResponse(proposalId, 5, "LEFT", 0.8, "Following majority", null, 0.6/* , BehaviorType.FOLLOWER TODO: revisit once adding BehaviorType*/));
-        voting.processVote(new VoteResponse(proposalId, 6, "RIGHT", 0.6, "Uncertain", null, 0.5/* , BehaviorType.FLOCKING TODO: revisit once adding BehaviorType*/));
-        voting.processVote(new VoteResponse(proposalId, 7, "LEFT", 0.9, "Left is better", null, 0.9/* , BehaviorType.FLOCKING TODO: revisit once adding BehaviorType*/));
+        voting.processVote(new VoteResponse(proposalId, 1, "LEFT", 0.9, "Left path clearer", null, 0.8, BehaviorType.SCOUT));
+        voting.processVote(new VoteResponse(proposalId, 2, "LEFT", 0.8, "Agree with scout", null, 0.9, BehaviorType.FLOCKING));
+        voting.processVote(new VoteResponse(proposalId, 3, "RIGHT", 0.7, "Right seems safer", null, 0.7, BehaviorType.GUARD));
+        voting.processVote(new VoteResponse(proposalId, 4, "LEFT", 1.0, "Left is optimal", null, 1.0, BehaviorType.LEADER));
+        voting.processVote(new VoteResponse(proposalId, 5, "LEFT", 0.8, "Following majority", null, 0.6, BehaviorType.FOLLOWER));
+        voting.processVote(new VoteResponse(proposalId, 6, "RIGHT", 0.6, "Uncertain", null, 0.5, BehaviorType.FLOCKING));
+        voting.processVote(new VoteResponse(proposalId, 7, "LEFT", 0.9, "Left is better", null, 0.9, BehaviorType.FLOCKING));
         
+        System.out.println();
+        System.out.println("Waiting for voting timeout to complete...");
+        
+        // Wait for timeout period to expire (8 seconds default)
+        try {
+            Thread.sleep(8500);  // 8.5 seconds to ensure timeout passed
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        
+        VoteResult result = voting.checkConsensus(proposalId);
+
+        System.out.println();
+        System.out.println("Result: " + result.reason);
+
         System.out.println();
         System.out.println("Expected: LEFT wins with 71% (5/7 votes)");
         System.out.println("  ✓ PASS: Simple consensus test");
@@ -139,8 +154,14 @@ public class VotingTest {
         voting.processVote(new VoteResponse(proposalId, 5, "YES"));
         voting.processVote(new VoteResponse(proposalId, 6, "NO"));
         voting.processVote(new VoteResponse(proposalId, 7, "YES"));
-        
-        // Force check since we're testing, not waiting for auto-check
+
+        // Wait for timeout period to expire (8 seconds default)
+        try {
+            Thread.sleep(8500);  // 8.5 seconds to ensure timeout passed
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         VoteResult result = voting.checkConsensus(proposalId);
         
         System.out.println();
@@ -179,13 +200,30 @@ public class VotingTest {
         System.out.println("Collecting votes:");
         for (int i = 1; i <= 7; i++) {
             voting.processVote(new VoteResponse(proposalId, i, "RETURN_ALL", 1.0, 
-                "Safety first", null, 0.7/* , BehaviorType.FLOCKING TODO: revisit once adding BehaviorType*/));
+                "Safety first", null, 0.7, BehaviorType.FLOCKING));
         }
-        
+
+        // Wait for timeout period to expire (10 seconds default)
+        try {
+            Thread.sleep(10500);  // 10.5 seconds to ensure timeout passed
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        VoteResult result = voting.checkConsensus(proposalId);
+
+        System.out.println();
+        System.out.println("Result: " + result.reason);
+
         System.out.println();
         System.out.println("Expected: Unanimous RETURN_ALL decision");
-        System.out.println("  ✓ PASS: Unanimous decision test");
+        if(result.consensusReached && (result.consensusLevel == 1)) {
+          System.out.println("  ✓ PASS: Unanimous decision test, consensus reached with 100% consensus level");
         System.out.println();
+        } else {
+          System.out.println("  ✓ FAIL: Unanimous decision test, conditions not met");
+        System.out.println();
+        }
     }
     
     /**
@@ -216,8 +254,15 @@ public class VotingTest {
         voting.processVote(new VoteResponse(proposalId, 5, "NORTH"));
         voting.processVote(new VoteResponse(proposalId, 6, "SOUTH"));
         
+        // Wait for timeout period to expire (8 seconds default)
+        try {
+            Thread.sleep(8500);  // 8.5 seconds to ensure timeout passed
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         VoteResult result = voting.checkConsensus(proposalId);
-        
+
         System.out.println();
         System.out.println("Result: " + result.reason);
         
@@ -260,21 +305,25 @@ public class VotingTest {
         
         // Expert votes (Scout and Leader) for PATH_A
         VoteResponse scoutVote = new VoteResponse(proposalId, 1, "PATH_A", 1.0,
-            "Scouted ahead, PATH_A is clear", new Point2D(280, 290), 0.9/* , BehaviorType.SCOUT TODO: revisit once adding BehaviorType*/);        scoutVote.calculateWeight(voting.getProposal(proposalId), problemLocation);
+            "Scouted ahead, PATH_A is clear", new Point2D(280, 290), 0.9, BehaviorType.SCOUT);
+        scoutVote.calculateWeight(voting.getProposal(proposalId), problemLocation);
         voting.processVote(scoutVote);
         
         VoteResponse leaderVote = new VoteResponse(proposalId, 2, "PATH_A", 1.0,
-            "Agree with scout assessment", new Point2D(290, 295), 1.0/* , BehaviorType.LEADER TODO: revisit once adding BehaviorType*/);
+            "Agree with scout assessment", new Point2D(290, 295), 1.0, BehaviorType.LEADER);
         leaderVote.calculateWeight(voting.getProposal(proposalId), problemLocation);
         voting.processVote(leaderVote);
         
         // Regular agents split
-        voting.processVote(new VoteResponse(proposalId, 3, "PATH_B", 0.6, "", null, 0.8/* , BehaviorType.FLOCKING TODO: revisit once adding BehaviorType*/));
-        voting.processVote(new VoteResponse(proposalId, 4, "PATH_B", 0.7, "", null, 0.7/* , BehaviorType.FLOCKING TODO: revisit once adding BehaviorType*/));
-        voting.processVote(new VoteResponse(proposalId, 5, "PATH_A", 0.8, "", null, 0.9/* , BehaviorType.FLOCKING TODO: revisit once adding BehaviorType*/));
+        voting.processVote(new VoteResponse(proposalId, 3, "PATH_B", 0.6, "", null, 0.8, BehaviorType.FLOCKING));
+        voting.processVote(new VoteResponse(proposalId, 4, "PATH_B", 0.7, "", null, 0.7, BehaviorType.FLOCKING));
+        voting.processVote(new VoteResponse(proposalId, 5, "PATH_A", 0.8, "", null, 0.9, BehaviorType.FLOCKING));
         
         VoteResult result = voting.checkConsensus(proposalId);
         
+        System.out.println();
+        System.out.println("Result: " + result.reason);
+
         System.out.println();
         System.out.println("Regular count: PATH_A=3, PATH_B=2");
         System.out.println("Weighted: Scout and Leader opinions weighted higher");

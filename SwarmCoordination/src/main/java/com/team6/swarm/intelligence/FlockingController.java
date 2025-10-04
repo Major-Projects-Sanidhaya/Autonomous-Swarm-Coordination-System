@@ -100,7 +100,7 @@ public class FlockingController {
      * @return MovementCommand containing combined flocking forces
      */
     public MovementCommand calculateFlocking(int agentId, AgentState currentState, 
-                                           List<NeighborInfo> neighbors) {
+                                            List<NeighborInfo> neighbors) {
         long startTime = System.currentTimeMillis();
         
         // Calculate the three fundamental flocking forces

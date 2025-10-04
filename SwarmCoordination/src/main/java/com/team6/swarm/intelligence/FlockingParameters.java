@@ -101,9 +101,9 @@ public class FlockingParameters {
      * Allows creation of specialized flocking profiles
      */
     public FlockingParameters(double separationRadius, double separationWeight,
-                             double alignmentRadius, double alignmentWeight,
-                             double cohesionRadius, double cohesionWeight,
-                             double maxSpeed, double maxForce) {
+                              double alignmentRadius, double alignmentWeight,
+                              double cohesionRadius, double cohesionWeight,
+                              double maxSpeed, double maxForce) {
         this.separationRadius = separationRadius;
         this.separationWeight = separationWeight;
         this.alignmentRadius = alignmentRadius;

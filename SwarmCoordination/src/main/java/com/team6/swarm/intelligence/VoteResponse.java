@@ -111,7 +111,7 @@ public class VoteResponse {
     // Agent context (for weighted voting)
     public Point2D agentPosition;  // Voter location
     public double agentBattery;    // Voter power level
-    //public BehaviorType agentRole; // Voter current role TODO: when doing BehaviorType
+    public BehaviorType agentRole; // Voter current role
     
     // Vote processing
     public double calculatedWeight; // System-calculated vote weight
@@ -136,8 +136,8 @@ public class VoteResponse {
      */
     public VoteResponse(String proposalId, int voterId, String choice,
                         double confidence, String reasoning,
-                        Point2D agentPosition, double agentBattery
-                        /*BehaviorType agentRole TODO: when doing BehaviorType*/) {
+                        Point2D agentPosition, double agentBattery,
+                        BehaviorType agentRole) {
         this.proposalId = proposalId;
         this.voterId = voterId;
         this.choice = choice;
@@ -146,7 +146,7 @@ public class VoteResponse {
         this.timestamp = System.currentTimeMillis();
         this.agentPosition = agentPosition;
         this.agentBattery = agentBattery;
-        // this.agentRole = agentRole; TODO: when doing BehaviorType
+        this.agentRole = agentRole;
         this.calculatedWeight = 1.0;
         this.isValid = false;
     }
@@ -195,8 +195,8 @@ public class VoteResponse {
             weight *= 0.7;  // Low battery agents get reduced weight
         }
         
-        // Weight by role relevance TODO: Implement BehaviorType so this can be used... is this me?
-        /*if (agentRole != null) {
+        // Weight by role relevance
+        if (agentRole != null) {
             switch (proposal.proposalType) {
                 case NAVIGATION:
                     // Scout opinions weighted higher for navigation
@@ -221,7 +221,7 @@ public class VoteResponse {
                 default:
                     break;
             }
-        }*/
+        }
         
         // Weight by proximity to problem
         if (agentPosition != null && problemLocation != null) {
