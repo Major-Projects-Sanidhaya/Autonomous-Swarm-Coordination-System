@@ -119,7 +119,7 @@
  * - Logged by: Anthony's monitoring system
  * - Stored in: Recent decisions history
  */
-package com.team6.swarm.intelligence.Voting;
+package com.team6.swarm.intelligence.voting;
 
 import java.util.Map;
 import java.util.HashMap;

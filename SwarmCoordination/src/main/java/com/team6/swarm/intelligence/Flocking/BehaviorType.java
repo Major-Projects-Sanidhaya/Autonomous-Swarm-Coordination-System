@@ -104,7 +104,7 @@
  * - Multiple behaviors can blend (FLOCKING + SCOUT)
  * - Priority system resolves conflicts
  */
-package com.team6.swarm.intelligence.Flocking;
+package com.team6.swarm.intelligence.flocking;
 
 public enum BehaviorType {
     /**

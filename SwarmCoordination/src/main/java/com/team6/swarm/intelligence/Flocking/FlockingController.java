@@ -54,7 +54,7 @@
  * - Sends: MovementCommand to Sanidhaya's agent system
  * - Sends: Performance metrics to Anthony's monitoring
  */
-package com.team6.swarm.intelligence.Flocking;
+package com.team6.swarm.intelligence.flocking;
 
 import com.team6.swarm.core.*;
 

@@ -43,7 +43,7 @@
  * ✓ Agents respond to flocking forces
  * ✓ Beautiful coordinated movement emerges
  */
-package com.team6.swarm.intelligence.Flocking;
+package com.team6.swarm.intelligence.flocking;
 
 import com.team6.swarm.core.*;
 

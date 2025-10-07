@@ -81,7 +81,7 @@
  * - Modified by: Anthony's UI for mission-specific tuning
  * - Read by: Consensus calculation algorithms
  */
-package com.team6.swarm.intelligence.Voting;
+package com.team6.swarm.intelligence.voting;
 
 public class VotingParameters {
     // Consensus requirements

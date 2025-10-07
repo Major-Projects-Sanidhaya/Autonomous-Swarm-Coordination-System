@@ -93,10 +93,10 @@
  * - Stored in: Vote response collections
  * - Used in: Consensus calculations
  */
-package com.team6.swarm.intelligence.Voting;
+package com.team6.swarm.intelligence.voting;
 
 import com.team6.swarm.core.Point2D;
-import com.team6.swarm.intelligence.Flocking.BehaviorType;
+import com.team6.swarm.intelligence.flocking.BehaviorType;
 
 public class VoteResponse {
     // Identification
