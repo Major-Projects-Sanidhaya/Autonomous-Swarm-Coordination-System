@@ -1,3 +1,5 @@
 *.class
 target/
 build/
+**/Sanidhaya_doc.docx
+**/Sanidhaya_doc.pdf
