@@ -8,7 +8,7 @@ public class MainInterface extends Application {
     private Visualizer visualizer;
     private ControlPanel controlPanel;
     private SystemController systemController;
-    private EventBus eventBus;
+    private EventBus eventBus;  // Shared event bus for integration
 
     @Override
     public void start(Stage primaryStage) {
@@ -18,12 +18,12 @@ public class MainInterface extends Application {
         visualizer = new Visualizer(eventBus);
         controlPanel = new ControlPanel(eventBus, systemController);
 
-        // Setup UI layout
+        // Setup UI layout: BorderPane with visualizer in center, control panel on bottom
         BorderPane root = new BorderPane();
-        root.setCenter(visualizer.getCanvasPane());
+        root.setCenter(visualizer.getCanvasPane());  // Assuming Visualizer provides a Pane
         root.setBottom(controlPanel.getPanel());
 
-        // Setup event listeners for incoming updates
+        // Setup event handlers for integration
         setupEventListeners();
 
         Scene scene = new Scene(root, 1200, 800);
@@ -31,43 +31,30 @@ public class MainInterface extends Application {
         primaryStage.setScene(scene);
         primaryStage.show();
 
-        // Start simulation
+        // Start the simulation loop (e.g., via AnimationTimer for real-time updates)
         systemController.startSimulation();
     }
 
     private void setupEventListeners() {
+        // Listen for updates from other components
         eventBus.registerListener(event -> {
-            switch (event.type) {
-                case VISUALIZATION_UPDATE:
-                    if (event.eventData instanceof VisualizationUpdate) {
-                        VisualizationUpdate update = (VisualizationUpdate) event.eventData;
-                        visualizer.updateAgentDisplay(update.agentStates);
-                    }
-                    break;
-                case NETWORK_STATUS:
-                    if (event.eventData instanceof NetworkStatus) {
-                        NetworkStatus status = (NetworkStatus) event.eventData;
-                        visualizer.drawCommunicationLinks(status.connections);
-                    }
-                    break;
-                case DECISION_STATUS:
-                    if (event.eventData instanceof DecisionStatus) {
-                        DecisionStatus status = (DecisionStatus) event.eventData;
-                        visualizer.showDecisionProcess(status);
-                        controlPanel.updateDecisionDisplay(status);
-                    }
-                    break;
-                default:
-                    // Ignore other events
-                    break;
+            if (event.type == EventType.VISUALIZATION_UPDATE) {
+                VisualizationUpdate update = (VisualizationUpdate) event.eventData;
+                visualizer.updateAgentDisplay(update.agentStates);
+            } else if (event.type == EventType.NETWORK_STATUS) {
+                NetworkStatus status = (NetworkStatus) event.eventData;
+                visualizer.drawCommunicationLinks(status.connections);
+            } else if (event.type == EventType.DECISION_STATUS) {
+                DecisionStatus status = (DecisionStatus) event.eventData;
+                visualizer.showDecisionProcess(status);
+                controlPanel.updateDecisionDisplay(status);  // Update UI panels
             }
         });
     }
 
+    // Additional methods for shutdown, etc.
     @Override
     public void stop() {
-        if (systemController != null) {
-            systemController.stopSimulation();
-        }
+        systemController.stopSimulation();
     }
 }
