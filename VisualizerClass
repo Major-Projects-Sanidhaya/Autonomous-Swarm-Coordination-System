@@ -2,24 +2,20 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class Visualizer {
-    private static final double WORLD_WIDTH = 1000.0;
-    private static final double WORLD_HEIGHT = 800.0;
     private Canvas canvas;
     private Pane canvasPane;
     private GraphicsContext gc;
     private EventBus eventBus;
-    private Map<Integer, AgentState> currentAgents = new HashMap<>();  // Store for lookups
 
     public Visualizer(EventBus eventBus) {
         this.eventBus = eventBus;
-        canvas = new Canvas(WORLD_WIDTH, WORLD_HEIGHT);
+        canvas = new Canvas(800, 600);  // Adjustable size
         canvasPane = new Pane(canvas);
         gc = canvas.getGraphicsContext2D();
+        // Set up animation loop for real-time updates (e.g., using AnimationTimer)
         setupAnimationTimer();
     }
 
@@ -28,75 +24,77 @@ public class Visualizer {
     }
 
     public void updateAgentDisplay(List<AgentState> agents) {
-        if (agents == null) return;
-        currentAgents.clear();
-        for (AgentState agent : agents) {
-            currentAgents.put(agent.agentId, agent);
-        }
-
-        // Clear and draw
+        // Clear canvas
         gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
-        gc.setStroke(Color.BLACK);
-        gc.strokeRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);  // Boundaries
 
+        // Draw world boundaries (assuming fixed world size from spec)
+        gc.setStroke(Color.BLACK);
+        gc.strokeRect(0, 0, 1000, 800);  // Example world bounds
+
+        // Draw agents as colored circles
         for (AgentState agent : agents) {
             double x = agent.position.x;
             double y = agent.position.y;
-            Color color = getAgentColor(agent.status);
+            Color color = getAgentColor(agent.status);  // e.g., green for ACTIVE, red for FAILED
             gc.setFill(color);
-            gc.fillOval(x - 5, y - 5, 10, 10);
+            gc.fillOval(x - 5, y - 5, 10, 10);  // Agent as 10px circle
 
-            // Heading
+            // Draw heading line
             gc.setStroke(Color.BLUE);
             double headX = x + Math.cos(agent.heading) * 10;
             double headY = y + Math.sin(agent.heading) * 10;
             gc.strokeLine(x, y, headX, headY);
 
-            // Battery
+            // Draw battery level as text
             gc.setFill(Color.BLACK);
             gc.fillText("Batt: " + (int)(agent.batteryLevel * 100) + "%", x + 10, y - 10);
         }
     }
 
     public void drawCommunicationLinks(List<ConnectionInfo> connections) {
-        if (connections == null) return;
         gc.setStroke(Color.GRAY);
+        gc.setLineWidth(1);
         for (ConnectionInfo conn : connections) {
-            Point2D pos1 = getAgentPosition(conn.agent1Id);
+            Point2D pos1 = getAgentPosition(conn.agent1Id);  // Helper to fetch positions
             Point2D pos2 = getAgentPosition(conn.agent2Id);
             if (pos1 != null && pos2 != null) {
-                gc.setLineWidth(1 + (conn.signalStrength * 3));  // Thicker for strength
                 gc.strokeLine(pos1.x, pos1.y, pos2.x, pos2.y);
+                // Draw signal strength (thicker line for stronger signal)
+                double strength = conn.signalStrength;  // From NetworkStatus
+                gc.setLineWidth(1 + strength * 3);
             }
         }
-        gc.setLineWidth(1);  // Reset
     }
 
     public void showDecisionProcess(DecisionStatus decision) {
-        if (decision == null) return;
+        // Draw voting progress (e.g., pie chart or bar for votes)
         gc.setFill(Color.YELLOW);
-        gc.fillRect(10, 10, 200, 50);
+        gc.fillRect(10, 10, 200, 50);  // Example progress bar
         gc.setFill(Color.BLACK);
-        gc.fillText("Decision: " + (decision.currentDecision != null ? decision.currentDecision : "None") +
-                    " (Consensus: " + decision.consensusReached + ")", 10, 30);
-
-        // Vote bars
+        gc.fillText("Decision: " + decision.currentDecision + " (Consensus: " + decision.consensusReached + ")", 10, 30);
+        // More detailed visualization: e.g., vote counts as bars
         if (decision.voteCounts != null) {
             int barWidth = 20;
             int startX = 220;
-            for (Map.Entry<String, Integer> entry : decision.voteCounts.entrySet()) {
-                int count = entry.getValue();
+            for (String option : decision.voteCounts.keySet()) {
+                int count = decision.voteCounts.get(option);
                 gc.setFill(Color.GREEN);
-                gc.fillRect(startX, 10, barWidth, count * 5);
-                gc.fillText(entry.getKey() + ": " + count, startX, 70);
+                gc.fillRect(startX, 10, barWidth, count * 5);  // Scaled bar
+                gc.fillText(option + ": " + count, startX, 70);
                 startX += 50;
             }
         }
     }
 
-    private Point2D getAgentPosition(int agentId) {
-        AgentState state = currentAgents.get(agentId);
-        return (state != null) ? state.position : null;
+    private void setupAnimationTimer() {
+        // Use JavaFX AnimationTimer for continuous rendering (60 FPS)
+        new javafx.animation.AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                // Trigger redraws based on events; actual updates come via event bus
+                // This can be paused/resumed via SystemController
+            }
+        }.start();
     }
 
     private Color getAgentColor(AgentStatus status) {
@@ -104,18 +102,13 @@ public class Visualizer {
             case ACTIVE: return Color.GREEN;
             case FAILED: return Color.RED;
             case BATTERY_LOW: return Color.ORANGE;
-            case INACTIVE:
-            case MAINTENANCE: return Color.GRAY;
-            default: return Color.BLACK;
+            default: return Color.GRAY;
         }
     }
 
-    private void setupAnimationTimer() {
-        new javafx.animation.AnimationTimer() {
-            @Override
-            public void handle(long now) {
-                // Redraw loop; actual content updated via events
-            }
-        }.start();
+    // Helper method (assumes access to current agent states)
+    private Point2D getAgentPosition(int agentId) {
+        // Fetch from shared state or recent update; placeholder
+        return new Point2D(0, 0);
     }
 }
