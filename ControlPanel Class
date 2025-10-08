@@ -2,25 +2,25 @@ import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
-import java.util.Map;
+import javafx.event.EventHandler;
+import javafx.scene.input.MouseEvent;
+
+// Assumed: SystemCommand, CommandType, BehaviorConfiguration, NetworkConfiguration, Point2D.
 
 public class ControlPanel {
     private VBox panel;
     private EventBus eventBus;
     private SystemController systemController;
+    private Visualizer visualizer;
     private Text decisionDisplay;
-    private Visualizer visualizer;  // For waypoint mouse integration
 
-    public ControlPanel(EventBus eventBus, SystemController systemController) {
+    public ControlPanel(EventBus eventBus, SystemController systemController, Visualizer visualizer) {
         this.eventBus = eventBus;
         this.systemController = systemController;
-        this.visualizer = null;  // Set externally if needed
+        this.visualizer = visualizer;
         setupUI();
-    }
-
-    public void setVisualizer(Visualizer viz) {
-        this.visualizer = viz;
     }
 
     public VBox getPanel() {
@@ -38,7 +38,8 @@ public class ControlPanel {
         spawnButton.setOnAction(e -> {
             SystemCommand cmd = new SystemCommand();
             cmd.type = CommandType.SPAWN_AGENT;
-            cmd.parameters = Map.of("position", new Point2D(100, 100), "maxSpeed", 50.0);
+            cmd.parameters.put("position", new Point2D(100, 100));
+            cmd.parameters.put("maxSpeed", 50.0);
             cmd.timestamp = System.currentTimeMillis();
             systemController.executeCommand(cmd);
         });
@@ -46,19 +47,18 @@ public class ControlPanel {
         removeButton.setOnAction(e -> {
             TextInputDialog dialog = new TextInputDialog();
             dialog.setTitle("Remove Agent ID");
-            String idStr = dialog.showAndWait().orElse(null);
-            if (idStr != null && !idStr.isEmpty()) {
+            Optional<String> result = dialog.showAndWait();
+            result.ifPresent(idStr -> {
                 try {
-                    int agentId = Integer.parseInt(idStr);
                     SystemCommand cmd = new SystemCommand();
                     cmd.type = CommandType.REMOVE_AGENT;
-                    cmd.parameters = Map.of("agentId", agentId);
+                    cmd.parameters.put("agentId", Integer.parseInt(idStr));
                     cmd.timestamp = System.currentTimeMillis();
                     systemController.executeCommand(cmd);
                 } catch (NumberFormatException ex) {
                     // Handle invalid input (e.g., alert)
                 }
-            }
+            });
         });
         agentControls.getChildren().addAll(spawnButton, removeButton);
 
@@ -66,17 +66,28 @@ public class ControlPanel {
         Button waypointButton = new Button("Enable Waypoint Placement");
         waypointButton.setOnAction(e -> enableWaypointMode());
 
-        // Behavior Sliders (to Lauren)
-        HBox sepBox = createSliderBox("Separation Weight", 0, 2, 1.5, "separationWeight");
-        HBox alignBox = createSliderBox("Alignment Weight", 0, 2, 1.0, "alignmentWeight");
-        HBox cohesionBox = createSliderBox("Cohesion Weight", 0, 2, 1.0, "cohesionWeight");
+        // Parameter Sliders
+        HBox sepBox = createSliderBox("Separation Weight", 0, 2, 1.5, val -> {
+            BehaviorConfiguration config = new BehaviorConfiguration();
+            config.parameters.put("separationWeight", val);
+            eventBus.publishEvent(new SystemEvent(EventType.BEHAVIOR_CONFIG, "Anthony", config));
+        });
 
-        // Network Slider (to John)
-        HBox commBox = createNetworkSliderBox("Comm Range", 50, 200, 100, "maxRange");
+        HBox alignBox = createSliderBox("Alignment Weight", 0, 2, 1.0, val -> {
+            BehaviorConfiguration config = new BehaviorConfiguration();
+            config.parameters.put("alignmentWeight", val);
+            eventBus.publishEvent(new SystemEvent(EventType.BEHAVIOR_CONFIG, "Anthony", config));
+        });
+
+        HBox commBox = createSliderBox("Comm Range", 50, 200, 100, val -> {
+            NetworkConfiguration config = new NetworkConfiguration();
+            config.parameters.put("maxRange", val);
+            eventBus.publishEvent(new SystemEvent(EventType.NETWORK_CONFIG, "Anthony", config));
+        });
 
         // Decision Display
         decisionDisplay = new Text("No active decisions");
-        decisionDisplay.setFill(javafx.scene.paint.Color.BLACK);
+        decisionDisplay.setFill(Color.BLACK);
 
         // Simulation Controls
         HBox simControls = new HBox(10);
@@ -84,97 +95,64 @@ public class ControlPanel {
         startButton.setOnAction(e -> {
             SystemCommand cmd = new SystemCommand();
             cmd.type = CommandType.START_SIMULATION;
-            cmd.timestamp = System.currentTimeMillis();
             systemController.executeCommand(cmd);
         });
         Button stopButton = new Button("Stop Simulation");
         stopButton.setOnAction(e -> {
             SystemCommand cmd = new SystemCommand();
             cmd.type = CommandType.STOP_SIMULATION;
-            cmd.timestamp = System.currentTimeMillis();
             systemController.executeCommand(cmd);
         });
         simControls.getChildren().addAll(startButton, stopButton);
 
-        // Add to panel
+        // Assemble panel
         panel.getChildren().addAll(
             new Label("Ground Control Panel"),
             agentControls,
             waypointButton,
-            sepBox, alignBox, cohesionBox,
+            sepBox,
+            alignBox,
             commBox,
             decisionDisplay,
             simControls
         );
     }
 
-    private HBox createSliderBox(String labelText, double min, double max, double initial, String paramKey) {
+    private HBox createSliderBox(String labelText, double min, double max, double initial, javafx.util.Callback<Double, Void> onChange) {
+        Label label = new Label(labelText + ":");
         Slider slider = new Slider(min, max, initial);
         slider.setShowTickLabels(true);
-        slider.setMajorTickUnit(0.5);
-        Label label = new Label(labelText + ":");
-        HBox box = new HBox(10, label, slider);
-        slider.valueProperty().addListener((obs, old, newVal) -> {
-            BehaviorConfiguration config = new BehaviorConfiguration();
-            config.parameters = Map.of(paramKey, newVal.doubleValue());
-            config.timestamp = System.currentTimeMillis();
-            eventBus.publishEvent(new SystemEvent(EventType.BEHAVIOR_CONFIG, "Anthony", config));
-        });
-        return box;
-    }
-
-    private HBox createNetworkSliderBox(String labelText, double min, double max, double initial, String paramKey) {
-        Slider slider = new Slider(min, max, initial);
-        slider.setShowTickLabels(true);
-        slider.setMajorTickUnit(25);
-        Label label = new Label(labelText + ":");
-        HBox box = new HBox(10, label, slider);
-        slider.valueProperty().addListener((obs, old, newVal) -> {
-            NetworkConfiguration config = new NetworkConfiguration();
-            config.parameters = Map.of(paramKey, newVal.doubleValue());
-            config.timestamp = System.currentTimeMillis();
-            eventBus.publishEvent(new SystemEvent(EventType.NETWORK_CONFIG, "Anthony", config));
-        });
-        return box;
+        slider.setMajorTickUnit((max - min) / 5);
+        slider.valueProperty().addListener((obs, old, newVal) -> onChange.call(newVal.doubleValue()));
+        return new HBox(10, label, slider);
     }
 
     public void handleWaypointPlacement(Point2D position) {
-        if (position == null) return;
         SystemCommand cmd = new SystemCommand();
         cmd.type = CommandType.PLACE_WAYPOINT;
-        cmd.parameters = Map.of("position", position);
+        cmd.parameters.put("position", position);
         cmd.timestamp = System.currentTimeMillis();
         systemController.executeCommand(cmd);
     }
 
-    public void handleParameterChange(String parameter, Object value) {
-        if (value == null) return;
-        if (parameter.startsWith("behavior")) {
-            BehaviorConfiguration config = new BehaviorConfiguration();
-            config.parameters = Map.of(parameter, value);
-            config.timestamp = System.currentTimeMillis();
-            eventBus.publishEvent(new SystemEvent(EventType.BEHAVIOR_CONFIG, "Anthony", config));
-        } else if ("communicationRange".equals(parameter)) {
-            NetworkConfiguration config = new NetworkConfiguration();
-            config.parameters = Map.of(parameter, value);
-            config.timestamp = System.currentTimeMillis();
-            eventBus.publishEvent(new SystemEvent(EventType.NETWORK_CONFIG, "Anthony", config));
-        }
-    }
-
     public void updateDecisionDisplay(DecisionStatus status) {
-        if (status == null) return;
-        decisionDisplay.setText("Decision: " + (status.currentDecision != null ? status.currentDecision : "None") +
-                                " | Consensus: " + (status.consensusReached ? "Yes" : "Pending") +
-                                " | Progress: " + (int)(status.progress * 100) + "%");
+        String text = "Decision: " + (status.currentDecision != null ? status.currentDecision : "None") +
+                      " | Consensus: " + (status.consensusReached ? "Yes" : "Pending") +
+                      " | Progress: " + (status.progress != null ? status.progress + "%" : "N/A");
+        decisionDisplay.setText(text);
     }
 
     private void enableWaypointMode() {
-        if (visualizer != null && visualizer.canvas != null) {  // Access via setter
-            visualizer.canvas.setOnMouseClicked(e -> {
-                Point2D pos = new Point2D(e.getX(), e.getY());
-                handleWaypointPlacement(pos);
-            });
-        }
+        // Add temporary mouse listener to canvas for waypoint clicks
+        EventHandler<MouseEvent> handler = e -> {
+            Point2D pos = new Point2D(e.getX(), e.getY());  // Canvas coords; map to world if needed
+            handleWaypointPlacement(pos);
+            // Remove listener after click (or toggle)
+            visualizer.canvas.removeEventHandler(MouseEvent.MOUSE_CLICKED, handler);
+            ((Button) panel.getChildren().get(2)).setText("Enable Waypoint Placement");  // Reset button
+        };
+        visualizer.canvas.setOnMouseClicked(handler);
+        // Update button text
+        ((Button) panel.getChildren().get(2)).setText("Click Canvas to Place Waypoint (Click Again to Disable)");
     }
 }
