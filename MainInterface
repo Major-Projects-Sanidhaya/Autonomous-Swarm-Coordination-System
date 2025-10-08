@@ -1,0 +1,73 @@
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.layout.BorderPane;
+import javafx.stage.Stage;
+import java.util.List;
+
+public class MainInterface extends Application {
+    private Visualizer visualizer;
+    private ControlPanel controlPanel;
+    private SystemController systemController;
+    private EventBus eventBus;
+
+    @Override
+    public void start(Stage primaryStage) {
+        // Initialize components
+        eventBus = new EventBus();
+        systemController = new SystemController(eventBus);
+        visualizer = new Visualizer(eventBus);
+        controlPanel = new ControlPanel(eventBus, systemController);
+
+        // Setup UI layout
+        BorderPane root = new BorderPane();
+        root.setCenter(visualizer.getCanvasPane());
+        root.setBottom(controlPanel.getPanel());
+
+        // Setup event listeners for incoming updates
+        setupEventListeners();
+
+        Scene scene = new Scene(root, 1200, 800);
+        primaryStage.setTitle("Distributed Multi-Agent System - Ground Control");
+        primaryStage.setScene(scene);
+        primaryStage.show();
+
+        // Start simulation
+        systemController.startSimulation();
+    }
+
+    private void setupEventListeners() {
+        eventBus.registerListener(event -> {
+            switch (event.type) {
+                case VISUALIZATION_UPDATE:
+                    if (event.eventData instanceof VisualizationUpdate) {
+                        VisualizationUpdate update = (VisualizationUpdate) event.eventData;
+                        visualizer.updateAgentDisplay(update.agentStates);
+                    }
+                    break;
+                case NETWORK_STATUS:
+                    if (event.eventData instanceof NetworkStatus) {
+                        NetworkStatus status = (NetworkStatus) event.eventData;
+                        visualizer.drawCommunicationLinks(status.connections);
+                    }
+                    break;
+                case DECISION_STATUS:
+                    if (event.eventData instanceof DecisionStatus) {
+                        DecisionStatus status = (DecisionStatus) event.eventData;
+                        visualizer.showDecisionProcess(status);
+                        controlPanel.updateDecisionDisplay(status);
+                    }
+                    break;
+                default:
+                    // Ignore other events
+                    break;
+            }
+        });
+    }
+
+    @Override
+    public void stop() {
+        if (systemController != null) {
+            systemController.stopSimulation();
+        }
+    }
+}
