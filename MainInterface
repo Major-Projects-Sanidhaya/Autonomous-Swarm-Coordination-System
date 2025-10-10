@@ -1,0 +1,60 @@
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.layout.BorderPane;
+import javafx.stage.Stage;
+import java.util.List;
+
+public class MainInterface extends Application {
+    private Visualizer visualizer;
+    private ControlPanel controlPanel;
+    private SystemController systemController;
+    private EventBus eventBus;  // Shared event bus for integration
+
+    @Override
+    public void start(Stage primaryStage) {
+        // Initialize components
+        eventBus = new EventBus();
+        systemController = new SystemController(eventBus);
+        visualizer = new Visualizer(eventBus);
+        controlPanel = new ControlPanel(eventBus, systemController);
+
+        // Setup UI layout: BorderPane with visualizer in center, control panel on bottom
+        BorderPane root = new BorderPane();
+        root.setCenter(visualizer.getCanvasPane());  // Assuming Visualizer provides a Pane
+        root.setBottom(controlPanel.getPanel());
+
+        // Setup event handlers for integration
+        setupEventListeners();
+
+        Scene scene = new Scene(root, 1200, 800);
+        primaryStage.setTitle("Distributed Multi-Agent System - Ground Control");
+        primaryStage.setScene(scene);
+        primaryStage.show();
+
+        // Start the simulation loop (e.g., via AnimationTimer for real-time updates)
+        systemController.startSimulation();
+    }
+
+    private void setupEventListeners() {
+        // Listen for updates from other components
+        eventBus.registerListener(event -> {
+            if (event.type == EventType.VISUALIZATION_UPDATE) {
+                VisualizationUpdate update = (VisualizationUpdate) event.eventData;
+                visualizer.updateAgentDisplay(update.agentStates);
+            } else if (event.type == EventType.NETWORK_STATUS) {
+                NetworkStatus status = (NetworkStatus) event.eventData;
+                visualizer.drawCommunicationLinks(status.connections);
+            } else if (event.type == EventType.DECISION_STATUS) {
+                DecisionStatus status = (DecisionStatus) event.eventData;
+                visualizer.showDecisionProcess(status);
+                controlPanel.updateDecisionDisplay(status);  // Update UI panels
+            }
+        });
+    }
+
+    // Additional methods for shutdown, etc.
+    @Override
+    public void stop() {
+        systemController.stopSimulation();
+    }
+}

@@ -1,0 +1,121 @@
+import javafx.animation.AnimationTimer;
+import javafx.application.Application;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.stage.Stage;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
+/**
+ * A basic JavaFX application for visualizing agents in an autonomous swarm coordination system.
+ * Agents are represented as colored circles that move randomly within a bounded area.
+ * This provides a simple foundation for swarm visualization; extend with coordination logic (e.g., flocking, pathfinding).
+ */
+public class SwarmAgentVisualizer extends Application {
+
+    private static final int WINDOW_WIDTH = 800;
+    private static final int WINDOW_HEIGHT = 600;
+    private static final int NUM_AGENTS = 20;
+    private static final double AGENT_RADIUS = 5.0;
+    private static final double MAX_SPEED = 2.0;
+
+    private List<Agent> agents;
+    private Random random;
+
+    @Override
+    public void start(Stage primaryStage) {
+        Group root = new Group();
+        Scene scene = new Scene(root, WINDOW_WIDTH, WINDOW_HEIGHT, Color.BLACK);
+
+        // Initialize agents
+        agents = new ArrayList<>();
+        random = new Random();
+
+        for (int i = 0; i < NUM_AGENTS; i++) {
+            Agent agent = new Agent(
+                random.nextDouble() * (WINDOW_WIDTH - 2 * AGENT_RADIUS) + AGENT_RADIUS,
+                random.nextDouble() * (WINDOW_HEIGHT - 2 * AGENT_RADIUS) + AGENT_RADIUS,
+                Color.hsb(random.nextDouble() * 360, 1.0, 1.0) // Random hue for distinct colors
+            );
+            agents.add(agent);
+            root.getChildren().add(agent.circle);
+        }
+
+        // Animation timer for agent movement
+        AnimationTimer timer = new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                for (Agent agent : agents) {
+                    agent.update(WINDOW_WIDTH, WINDOW_HEIGHT);
+                }
+            }
+        };
+        timer.start();
+
+        primaryStage.setTitle("Autonomous Swarm Coordination - Agent Visualization");
+        primaryStage.setScene(scene);
+        primaryStage.show();
+    }
+
+    /**
+     * Simple Agent class representing a swarm agent.
+     * Moves randomly within bounds; can be extended for coordination behaviors.
+     */
+    private static class Agent {
+        private Circle circle;
+        private double x, y;
+        private double dx, dy; // Velocity components
+
+        public Agent(double x, double y, Color color) {
+            this.x = x;
+            this.y = y;
+            this.dx = (Math.random() - 0.5) * 2 * MAX_SPEED; // Random initial velocity
+            this.dy = (Math.random() - 0.5) * 2 * MAX_SPEED;
+            this.circle = new Circle(AGENT_RADIUS, color);
+            updatePosition();
+        }
+
+        public void update(double maxX, double maxY) {
+            // Simple random walk: add noise to velocity occasionally
+            if (Math.random() < 0.05) { // 5% chance to change direction slightly
+                dx += (Math.random() - 0.5) * 0.5;
+                dy += (Math.random() - 0.5) * 0.5;
+                // Clamp speed
+                double speed = Math.sqrt(dx * dx + dy * dy);
+                if (speed > MAX_SPEED) {
+                    dx = (dx / speed) * MAX_SPEED;
+                    dy = (dy / speed) * MAX_SPEED;
+                }
+            }
+
+            // Update position
+            x += dx;
+            y += dy;
+
+            // Bounce off walls (simple boundary handling)
+            if (x - AGENT_RADIUS < 0 || x + AGENT_RADIUS > maxX) {
+                dx = -dx;
+                x = Math.max(AGENT_RADIUS, Math.min(maxX - AGENT_RADIUS, x));
+            }
+            if (y - AGENT_RADIUS < 0 || y + AGENT_RADIUS > maxY) {
+                dy = -dy;
+                y = Math.max(AGENT_RADIUS, Math.min(maxY - AGENT_RADIUS, y));
+            }
+
+            updatePosition();
+        }
+
+        private void updatePosition() {
+            circle.setCenterX(x);
+            circle.setCenterY(y);
+        }
+    }
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+}
