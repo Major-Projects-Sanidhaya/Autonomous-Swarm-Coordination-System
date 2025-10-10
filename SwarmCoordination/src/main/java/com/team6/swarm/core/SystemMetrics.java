@@ -57,8 +57,78 @@ public class SystemMetrics {
     public double systemLoad;
     public int updatesPerSecond;
     public double memoryUsage;
-    
+
+    // Tracking counters
+    private int stateUpdateCount;
+    private int taskCompletionCount;
+    private int communicationCount;
+    private long frameCount;
+    private double totalFrameTime;
+
     public SystemMetrics() {
         // Initialize with defaults
+        this.stateUpdateCount = 0;
+        this.taskCompletionCount = 0;
+        this.communicationCount = 0;
+        this.frameCount = 0;
+        this.totalFrameTime = 0.0;
+    }
+
+    /**
+     * Update metrics for current frame
+     * @param agentCount Number of agents in system
+     * @param deltaTime Time since last frame in seconds
+     */
+    public void update(int agentCount, double deltaTime) {
+        this.totalAgents = agentCount;
+        this.frameCount++;
+        this.totalFrameTime += deltaTime;
+
+        // Calculate updates per second (running average)
+        if (totalFrameTime > 0) {
+            this.updatesPerSecond = (int) (frameCount / totalFrameTime);
+        }
+
+        // Calculate system load (simplified)
+        this.systemLoad = Math.min(1.0, deltaTime * 60.0); // Assumes 60 FPS target
+
+        // Update memory usage
+        Runtime runtime = Runtime.getRuntime();
+        this.memoryUsage = (double) (runtime.totalMemory() - runtime.freeMemory()) / runtime.maxMemory();
+    }
+
+    /**
+     * Record an agent state update event
+     */
+    public void recordStateUpdate() {
+        this.stateUpdateCount++;
+    }
+
+    /**
+     * Record a task completion event
+     * @param status Completion status of the task
+     */
+    public void recordTaskCompletion(TaskCompletionReport.CompletionStatus status) {
+        this.taskCompletionCount++;
+    }
+
+    /**
+     * Record a communication event
+     */
+    public void recordCommunication() {
+        this.communicationCount++;
+    }
+
+    // Getters for tracking counts
+    public int getStateUpdateCount() {
+        return stateUpdateCount;
+    }
+
+    public int getTaskCompletionCount() {
+        return taskCompletionCount;
+    }
+
+    public int getCommunicationCount() {
+        return communicationCount;
     }
 }
