@@ -62,6 +62,49 @@
  */
 package com.team6.swarm.core;
 
-public class TaskCompletionReport {
+import java.util.HashMap;
+import java.util.Map;
 
+public class TaskCompletionReport {
+    public String taskId;
+    public int agentId;
+    public CompletionStatus status;
+    public Map<String, Object> resultData;
+    public long completionTime;
+    public double duration;
+
+    public enum CompletionStatus {
+        SUCCESS,   // Completed successfully
+        FAILED,    // Unable to complete
+        PARTIAL,   // Partially done (e.g., low battery)
+        CANCELLED, // Aborted by higher priority command
+        TIMEOUT    // Took too long
+    }
+
+    public TaskCompletionReport(String taskId, int agentId, CompletionStatus status) {
+        this.taskId = taskId;
+        this.agentId = agentId;
+        this.status = status;
+        this.resultData = new HashMap<>();
+        this.completionTime = System.currentTimeMillis();
+        this.duration = 0.0;
+    }
+
+    // Convenience method to add result data
+    public TaskCompletionReport addResult(String key, Object value) {
+        this.resultData.put(key, value);
+        return this; // Allow chaining
+    }
+
+    // Set duration in seconds
+    public TaskCompletionReport setDuration(double durationSeconds) {
+        this.duration = durationSeconds;
+        return this;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("TaskCompletionReport[task=%s, agent=%d, status=%s, duration=%.2fs]",
+                taskId, agentId, status, duration);
+    }
 }

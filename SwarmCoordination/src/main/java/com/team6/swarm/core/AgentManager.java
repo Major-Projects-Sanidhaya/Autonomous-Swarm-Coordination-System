@@ -57,18 +57,35 @@ public class AgentManager {
     private Map<Integer, Agent> agents;
     private int nextAgentId;
     private boolean simulationRunning;
-    
+    private EventBus eventBus;  // NEW: For Week 2 event-driven architecture
+
     public AgentManager() {
         this.agents = new ConcurrentHashMap<>();
         this.nextAgentId = 1;
         this.simulationRunning = false;
     }
+
+    // NEW: Constructor with EventBus for Week 2
+    public AgentManager(EventBus eventBus) {
+        this();
+        this.eventBus = eventBus;
+    }
     
     public Agent createAgent(Point2D position) {
         Agent agent = new Agent(nextAgentId++, position);
         agents.put(agent.getState().agentId, agent);
-        
-        System.out.println("Created " + agent.getState().agentName + 
+
+        System.out.println("Created " + agent.getState().agentName +
+                          " at " + position);
+        return agent;
+    }
+
+    // NEW: Overload for SystemController that takes ID
+    public Agent createAgent(int id, Point2D position) {
+        Agent agent = new Agent(id, position);
+        agents.put(agent.getState().agentId, agent);
+
+        System.out.println("Created " + agent.getState().agentName +
                           " at " + position);
         return agent;
     }
@@ -131,14 +148,26 @@ public class AgentManager {
         VisualizationUpdate update = new VisualizationUpdate();
         update.allAgents = getAllAgentStates();
         update.timestamp = System.currentTimeMillis();
-        
+
         // Add system metrics
         update.systemMetrics = new SystemMetrics();
         update.systemMetrics.totalAgents = agents.size();
         update.systemMetrics.activeAgents = (int) agents.values().stream()
             .filter(a -> a.getState().status == AgentStatus.ACTIVE)
             .count();
-        
+
         return update;
+    }
+
+    // NEW: Week 2 methods for SystemController
+    public void updateAll(double deltaTime) {
+        // Update all agents
+        for (Agent agent : agents.values()) {
+            agent.update(deltaTime);
+        }
+    }
+
+    public int getAgentCount() {
+        return agents.size();
     }
 }

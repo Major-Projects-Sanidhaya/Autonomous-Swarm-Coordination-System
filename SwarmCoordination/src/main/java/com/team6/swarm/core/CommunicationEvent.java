@@ -46,21 +46,47 @@
  */
 package com.team6.swarm.core;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class CommunicationEvent {
     public int senderId;
-    public Messagetype messagetype;
-    public Map<String, Object> payload; 
+    public MessageType messageType;
+    public Map<String, Object> payload;
     public double broadcastRange;
     public long timestamp;
 
-    public enum Messagetype{
+    public enum MessageType {
         STATE_BROADCAST,
         TASK_ASSIGNMENT,
         FORMATION_UPDATE,
         COLLISION_WARNING,
         TASK_COMPLETE
+    }
+
+    public CommunicationEvent(int senderId, MessageType messageType, double broadcastRange) {
+        this.senderId = senderId;
+        this.messageType = messageType;
+        this.broadcastRange = broadcastRange;
+        this.payload = new HashMap<>();
+        this.timestamp = System.currentTimeMillis();
+    }
+
+    // Convenience method to add data to payload
+    public CommunicationEvent addData(String key, Object value) {
+        this.payload.put(key, value);
+        return this; // Allow chaining
+    }
+
+    // Convenience method to get data from payload
+    public Object getData(String key) {
+        return this.payload.get(key);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("CommunicationEvent[sender=%d, type=%s, payload=%s, range=%.1f]",
+                senderId, messageType, payload, broadcastRange);
     }
 }
 

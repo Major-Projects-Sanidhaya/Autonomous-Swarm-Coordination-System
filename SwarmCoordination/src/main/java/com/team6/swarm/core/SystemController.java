@@ -71,7 +71,226 @@
  */
 package com.team6.swarm.core;
 
-public class SystemController {
+import com.team6.swarm.core.Point2D;
+import com.team6.swarm.core.AgentStateUpdate;
+import com.team6.swarm.core.TaskCompletionReport;
+import com.team6.swarm.core.CommunicationEvent;
 
+public class SystemController {
+    private AgentManager agentManager;
+    private EventBus eventBus;
+    private SystemMetrics metrics;
+    private SimulationState state;
+    private int targetFPS = 60;
+    private Thread simulationThread;
+    private long lastUpdateTime;
+    private volatile boolean running;
+
+    public enum SimulationState {
+        INITIALIZING,  // Setting up components
+        READY,         // Initialized but not running
+        RUNNING,       // Simulation loop active
+        PAUSED,        // Loop suspended, state preserved
+        STOPPED        // Clean shutdown complete
+    }
+
+    public SystemController() {
+        this.state = SimulationState.INITIALIZING;
+    }
+
+    /**
+     * Initialize all subsystems
+     * Call this before start()
+     */
+    public void initialize() {
+        System.out.println("SystemController: Initializing...");
+
+        // 1. Create EventBus
+        this.eventBus = new EventBus();
+
+        // 2. Create AgentManager with EventBus reference
+        this.agentManager = new AgentManager(eventBus);
+
+        // 3. Create SystemMetrics
+        this.metrics = new SystemMetrics();
+
+        // 4. Register EventBus subscribers
+        registerEventSubscribers();
+
+        // 5. Create initial agent population (example: 5 agents)
+        initializeAgents(5);
+
+        this.state = SimulationState.READY;
+        System.out.println("SystemController: Initialized successfully");
+    }
+
+    /**
+     * Create initial population of agents
+     */
+    private void initializeAgents(int count) {
+        for (int i = 1; i <= count; i++) {
+            Point2D position = new Point2D(
+                Math.random() * 800,  // Random x position
+                Math.random() * 600   // Random y position
+            );
+            agentManager.createAgent(i, position);
+        }
+        System.out.println("Created " + count + " agents");
+    }
+
+    /**
+     * Register event listeners for system-wide events
+     */
+    private void registerEventSubscribers() {
+        // Subscribe to AgentStateUpdate events
+        eventBus.subscribe(AgentStateUpdate.class, this::handleAgentStateUpdate);
+
+        // Subscribe to TaskCompletionReport events
+        eventBus.subscribe(TaskCompletionReport.class, this::handleTaskCompletion);
+
+        // Subscribe to CommunicationEvent events
+        eventBus.subscribe(CommunicationEvent.class, this::handleCommunication);
+    }
+
+    /**
+     * Start the simulation loop
+     */
+    public void start() {
+        if (state != SimulationState.READY && state != SimulationState.PAUSED) {
+            System.err.println("Cannot start: System must be READY or PAUSED");
+            return;
+        }
+
+        this.state = SimulationState.RUNNING;
+        this.running = true;
+        this.lastUpdateTime = System.currentTimeMillis();
+
+        // Run simulation in separate thread
+        simulationThread = new Thread(this::runSimulationLoop, "SimulationThread");
+        simulationThread.start();
+
+        System.out.println("SystemController: Started simulation at " + targetFPS + " FPS");
+    }
+
+    /**
+     * Main simulation loop - runs in separate thread
+     */
+    private void runSimulationLoop() {
+        while (running && state == SimulationState.RUNNING) {
+            long frameStart = System.currentTimeMillis();
+
+            // Calculate time since last frame (in seconds)
+            double deltaTime = (frameStart - lastUpdateTime) / 1000.0;
+            lastUpdateTime = frameStart;
+
+            // Limit deltaTime to prevent huge jumps
+            deltaTime = Math.min(deltaTime, 0.1); // Max 100ms per frame
+
+            // Update all agents
+            agentManager.updateAll(deltaTime);
+
+            // Update metrics
+            metrics.update(agentManager.getAgentCount(), deltaTime);
+
+            // Maintain target frame rate
+            maintainFrameRate(frameStart);
+        }
+    }
+
+    /**
+     * Sleep to maintain consistent frame rate
+     */
+    private void maintainFrameRate(long frameStart) {
+        long frameTime = System.currentTimeMillis() - frameStart;
+        long targetFrameTime = 1000 / targetFPS;
+        long sleepTime = targetFrameTime - frameTime;
+
+        if (sleepTime > 0) {
+            try {
+                Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    /**
+     * Pause the simulation
+     */
+    public synchronized void pause() {
+        if (state == SimulationState.RUNNING) {
+            this.state = SimulationState.PAUSED;
+            System.out.println("SystemController: Paused");
+        }
+    }
+
+    /**
+     * Resume from pause
+     */
+    public synchronized void resume() {
+        if (state == SimulationState.PAUSED) {
+            this.state = SimulationState.RUNNING;
+            this.lastUpdateTime = System.currentTimeMillis(); // Reset time
+            System.out.println("SystemController: Resumed");
+        }
+    }
+
+    /**
+     * Stop the simulation and clean up
+     */
+    public void stop() {
+        System.out.println("SystemController: Stopping...");
+        this.running = false;
+        this.state = SimulationState.STOPPED;
+
+        // Wait for simulation thread to finish
+        if (simulationThread != null) {
+            try {
+                simulationThread.join(2000); // Wait max 2 seconds
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        System.out.println("SystemController: Stopped");
+    }
+
+    // Event handlers
+    private void handleAgentStateUpdate(AgentStateUpdate update) {
+        // SystemController can log or track state changes
+        // For now, just track in metrics
+        metrics.recordStateUpdate();
+    }
+
+    private void handleTaskCompletion(TaskCompletionReport report) {
+        System.out.println("Task completed: " + report);
+        metrics.recordTaskCompletion(report.status);
+    }
+
+    private void handleCommunication(CommunicationEvent event) {
+        // SystemController can monitor communication
+        metrics.recordCommunication();
+    }
+
+    // Getters
+    public SimulationState getState() {
+        return state;
+    }
+
+    public EventBus getEventBus() {
+        return eventBus;
+    }
+
+    public AgentManager getAgentManager() {
+        return agentManager;
+    }
+
+    public SystemMetrics getMetrics() {
+        return metrics;
+    }
+
+    public void setTargetFPS(int fps) {
+        this.targetFPS = fps;
+    }
 }
 
