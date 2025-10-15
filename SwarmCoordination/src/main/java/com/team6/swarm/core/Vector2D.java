@@ -58,8 +58,17 @@ public class Vector2D {
     public Vector2D add(Vector2D other) {
         return new Vector2D(this.x + other.x, this.y + other.y);
     }
-    
+
+    public Vector2D subtract(Vector2D other) {
+        return new Vector2D(this.x - other.x, this.y - other.y);
+    }
+
     public Vector2D multiply(double scalar) {
         return new Vector2D(this.x * scalar, this.y * scalar);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("Vector2D(%.2f, %.2f)", x, y);
     }
 }
