@@ -256,13 +256,24 @@ public class MessageRouter {
     /**
      * Path node for BFS algorithm
      */
-    private static class PathNode {
-        final int agentId;
-        final List<Integer> path;
+    public static class PathNode {
+        public final int agentId;
+        public final List<Integer> path;
+        public final int hops;
+        public final double signalStrength;
         
-        PathNode(int agentId, List<Integer> path) {
+        public PathNode(int agentId, List<Integer> path) {
             this.agentId = agentId;
             this.path = path;
+            this.hops = path.size();
+            this.signalStrength = 0.0;
+        }
+        
+        public PathNode(int agentId, int hops, double signalStrength) {
+            this.agentId = agentId;
+            this.path = new ArrayList<>();
+            this.hops = hops;
+            this.signalStrength = signalStrength;
         }
     }
     
