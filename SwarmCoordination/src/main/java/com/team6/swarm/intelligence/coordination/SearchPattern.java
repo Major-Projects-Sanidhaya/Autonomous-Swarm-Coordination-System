@@ -144,8 +144,7 @@ public class SearchPattern {
      * CREATE SPIRAL SEARCH PATTERN
      * Expanding spiral from center point
      */
-    public static SearchPattern createSpiralSearch(Point2D center, double maxRadius, double spiralSpacing, 
-    int agentCount) {
+    public static SearchPattern createSpiralSearch(Point2D center, double maxRadius, double spiralSpacing, int agentCount) {
         SearchPattern pattern = new SearchPattern("spiral_" + System.currentTimeMillis(),
                                                   SearchPatternType.SPIRAL);
         pattern.centerPoint = center;
@@ -296,8 +295,7 @@ public class SearchPattern {
     /**
      * Generate perimeter positions around center
      */
-    private static List<Point2D> generatePerimeterPositions(Point2D center, double radius,
-            int agentCount) {
+    private static List<Point2D> generatePerimeterPositions(Point2D center, double radius, int agentCount) {
         List<Point2D> positions = new ArrayList<>();
         
         double angleStep = (2 * Math.PI) / agentCount;
