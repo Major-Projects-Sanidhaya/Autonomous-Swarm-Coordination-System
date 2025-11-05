@@ -20,11 +20,11 @@ public class ObstacleAvoidance {
     private static final double CRITICAL_DISTANCE = 30.0;
     
     // Obstacle tracking
-    private Map<String, Obstacle> detectedObstacles;
-    private Map<Integer, AvoidanceState> agentStates;
+    private Map<String, Obstacle> detectedObstacles = new HashMap<>();
+    private Map<Integer, AvoidanceState> agentStates = new HashMap<>();
     
     // Strategy selection
-    private AvoidanceStrategy currentStrategy;
+    private AvoidanceStrategy currentStrategy = AvoidanceStrategy.INDIVIDUAL;
     
     public ObstacleAvoidance() {
         this.detectedObstacles = new HashMap<>();
@@ -33,56 +33,96 @@ public class ObstacleAvoidance {
     }
     
     /**
-     * CALCULATE INDIVIDUAL AVOIDANCE FORCE
+     * CALCULATE INDIVIDUAL AVOIDANCE FORCE (uses agentVelocity for prediction & braking)
      */
     public static Vector2D calculateIndividualAvoidance(Point2D agentPosition,
-                                                        Vector2D agentVelocity,
-                                                        List<Obstacle> detectedObstacles) {
-        Vector2D totalAvoidance = new Vector2D(0, 0);
-        
-        if (detectedObstacles == null || detectedObstacles.isEmpty()) {
-            return totalAvoidance;
-        }
-        
-        for (Obstacle obstacle : detectedObstacles) {
-            double distance = agentPosition.distanceTo(obstacle.position);
-            
-            if (distance > DETECTION_RANGE) {
-                continue;
-            }
-            
-            // Calculate avoidance vector (away from obstacle)
-            Vector2D avoidanceDir = new Vector2D(
-                agentPosition.x - obstacle.position.x,
-                agentPosition.y - obstacle.position.y
-            );
-            
-            // Normalize
-            double magnitude = avoidanceDir.magnitude();
-            if (magnitude > 0) {
-                avoidanceDir = new Vector2D(
-                    avoidanceDir.x / magnitude,
-                    avoidanceDir.y / magnitude
-                );
-            }
-            
-            // Stronger avoidance for closer obstacles
-            double strength = 0;
-            if (distance < CRITICAL_DISTANCE) {
-                strength = AVOIDANCE_FORCE_MAX;
-            } else {
-                strength = AVOIDANCE_FORCE_MAX * 
-                          (DETECTION_RANGE - distance) / DETECTION_RANGE;
-            }
-            
-            // Add to total avoidance
-            totalAvoidance = new Vector2D(
-                totalAvoidance.x + avoidanceDir.x * strength,
-                totalAvoidance.y + avoidanceDir.y * strength
-            );
-        }
-        
+                              Vector2D agentVelocity,
+                              List<Obstacle> detectedObstacles) {
+      Vector2D totalAvoidance = new Vector2D(0, 0);
+
+      if (detectedObstacles == null || detectedObstacles.isEmpty()) {
         return totalAvoidance;
+      }
+
+      // time horizon to project agent position forward (seconds)
+      double timeHorizon = 1.0;
+      double small = 1e-6;
+
+      for (Obstacle obstacle : detectedObstacles) {
+        // predict future position using velocity
+        double predX = agentPosition.x + (agentVelocity != null ? agentVelocity.x * timeHorizon : 0.0);
+        double predY = agentPosition.y + (agentVelocity != null ? agentVelocity.y * timeHorizon : 0.0);
+        Point2D predictedPos = new Point2D(predX, predY);
+
+        double distance = predictedPos.distanceTo(obstacle.position);
+        if (distance > DETECTION_RANGE) {
+          continue;
+        }
+
+        // avoidance direction away from obstacle based on predicted position
+        Vector2D avoidanceDir = new Vector2D(
+          predictedPos.x - obstacle.position.x,
+          predictedPos.y - obstacle.position.y
+        );
+
+        // normalize avoidance direction
+        double mag = avoidanceDir.magnitude();
+        if (mag > small) {
+          avoidanceDir = new Vector2D(avoidanceDir.x / mag, avoidanceDir.y / mag);
+        }
+
+        // strength based on proximity (stronger when closer)
+        double strength;
+        if (distance < CRITICAL_DISTANCE) {
+          strength = AVOIDANCE_FORCE_MAX;
+        } else {
+          strength = AVOIDANCE_FORCE_MAX * (DETECTION_RANGE - distance) / DETECTION_RANGE;
+        }
+
+        // base avoidance contribution
+        Vector2D avoidanceContribution = new Vector2D(
+          avoidanceDir.x * strength,
+          avoidanceDir.y * strength
+        );
+
+        // velocity-based braking/bias: if agent is moving toward the obstacle, apply a component opposite to velocity
+        Vector2D velocityBias = new Vector2D(0, 0);
+        if (agentVelocity != null) {
+          double speed = agentVelocity.magnitude();
+          if (speed > small) {
+            // direction of velocity
+            Vector2D velDir = new Vector2D(agentVelocity.x / speed, agentVelocity.y / speed);
+
+            // vector from current agent position to obstacle (not predicted) to determine approach
+            Vector2D toObs = new Vector2D(
+              obstacle.position.x - agentPosition.x,
+              obstacle.position.y - agentPosition.y
+            );
+            double toObsDist = Math.sqrt(toObs.x * toObs.x + toObs.y * toObs.y);
+            double toObsNorm = toObsDist > small ? 1.0 / toObsDist : 0.0;
+
+            // cosine of angle between velocity and direction to obstacle; >0 means heading toward obstacle
+            double approachCos = (toObsNorm > 0) ?
+              (velDir.x * toObs.x + velDir.y * toObs.y) * toObsNorm : 0.0;
+
+            if (approachCos > 0) {
+              // scale braking by how fast and how directly we are heading toward the obstacle
+              double brakingScale = Math.min(1.0, speed / 10.0) * approachCos;
+              double brakingStrength = AVOIDANCE_FORCE_MAX * brakingScale * 0.8; // 0.8 is a tuning factor
+
+              velocityBias = new Vector2D(-velDir.x * brakingStrength, -velDir.y * brakingStrength);
+            }
+          }
+        }
+
+        // accumulate total avoidance (avoidance + velocity bias)
+        totalAvoidance = new Vector2D(
+          totalAvoidance.x + avoidanceContribution.x + velocityBias.x,
+          totalAvoidance.y + avoidanceContribution.y + velocityBias.y
+        );
+      }
+
+      return totalAvoidance;
     }
     
     /**
@@ -257,7 +297,7 @@ public class ObstacleAvoidance {
      * CALCULATE PATH AROUND OBSTACLES
      */
     public static List<Point2D> calculatePath(Point2D start, Point2D goal,
-                                             List<Obstacle> obstacles) {
+                                              List<Obstacle> obstacles) {
         List<Point2D> path = new ArrayList<>();
         path.add(start);
         
