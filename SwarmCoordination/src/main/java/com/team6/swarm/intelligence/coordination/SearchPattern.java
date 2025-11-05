@@ -271,8 +271,7 @@ public class SearchPattern {
     /**
      * Generate spiral waypoints from center
      */
-    private static List<Point2D> generateSpiralWaypoints(Point2D center, double maxRadius, double spacing, 
-    double startAngle) {
+    private static List<Point2D> generateSpiralWaypoints(Point2D center, double maxRadius, double spacing, double startAngle) {
         List<Point2D> waypoints = new ArrayList<>();
         
         double angle = startAngle;
