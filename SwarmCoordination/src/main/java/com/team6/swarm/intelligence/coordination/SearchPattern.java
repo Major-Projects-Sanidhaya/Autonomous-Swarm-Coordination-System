@@ -297,7 +297,7 @@ public class SearchPattern {
      * Generate perimeter positions around center
      */
     private static List<Point2D> generatePerimeterPositions(Point2D center, double radius,
-    int agentCount) {
+            int agentCount) {
         List<Point2D> positions = new ArrayList<>();
         
         double angleStep = (2 * Math.PI) / agentCount;
