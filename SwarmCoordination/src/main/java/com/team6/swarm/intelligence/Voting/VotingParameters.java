@@ -222,25 +222,3 @@ public class VotingParameters {
         );
     }
 }
-
-/**
- * TIMEOUTFALLBACK ENUM - What to do if vote times out
- */
-enum TimeoutFallback {
-    LEADER_DECIDES,      // Leader makes decision
-    STATUS_QUO,          // Keep current state
-    FAIL_SAFE,          // Choose safest option
-    RANDOM_CHOICE,       // Random selection
-    REVOTE              // Try voting again
-}
-
-/**
- * TIEBREAKERMODE ENUM - How to resolve tied votes
- */
-enum TiebreakerMode {
-    LEADER_DECIDES,      // Leader breaks tie
-    FIRST_OPTION,        // First option in list wins
-    RANDOM_CHOICE,       // Random selection
-    REVOTE,             // Vote again
-    STATUS_QUO          // No change
-}

@@ -480,14 +480,3 @@ public class Formation {
         );
     }
 }
-
-/**
- * FORMATIONROLE ENUM - Agent's role within formation
- */
-enum FormationRole {
-    LEADER,      // Front/center position
-    WING,        // Side positions
-    FOLLOWER,    // Following positions
-    PERIMETER,   // Outer edge
-    INTERIOR     // Inner positions
-}
