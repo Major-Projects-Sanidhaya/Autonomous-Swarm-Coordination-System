@@ -418,20 +418,30 @@ public class SearchPattern {
     
     /**
      * Generate next expanding perimeter position
+     * Uses agentId to preserve each agent's assigned angular sector (based on initial assignment)
      */
     private Point2D generateNextPerimeterPosition(int agentId, Point2D currentPosition) {
-        // Increase radius
-        double currentRadius = centerPoint.distanceTo(currentPosition);
-        double newRadius = currentRadius + expansionRate;
-        
-        // Maintain same angle on perimeter
-        double angle = Math.atan2(currentPosition.y - centerPoint.y,
-        currentPosition.x - centerPoint.x);
-        
-        double x = centerPoint.x + newRadius * Math.cos(angle);
-        double y = centerPoint.y + newRadius * Math.sin(angle);
-        
-        return new Point2D(x, y);
+      // Defensive checks
+      int agents = Math.max(1, this.totalAgents);
+      double currentRadius = centerPoint.distanceTo(currentPosition);
+      double newRadius = currentRadius + expansionRate;
+
+      // Try to obtain the agent's initially assigned angle (from its first waypoint if present)
+      double angle;
+      List<Point2D> assigned = agentWaypoints.get(agentId);
+      if (assigned != null && !assigned.isEmpty()) {
+        Point2D initial = assigned.get(0);
+        angle = Math.atan2(initial.y - centerPoint.y, initial.x - centerPoint.x);
+      } else {
+        // Fallback: evenly space by agentId around circle
+        double angleStep = (2 * Math.PI) / agents;
+        angle = (agentId % agents) * angleStep;
+      }
+
+      double x = centerPoint.x + newRadius * Math.cos(angle);
+      double y = centerPoint.y + newRadius * Math.sin(angle);
+
+      return new Point2D(x, y);
     }
     
     /**
@@ -470,8 +480,8 @@ public class SearchPattern {
      * Get cell key for position (for tracking)
      */
     private String getCellKey(Point2D point) {
-        int gridX = (int) (point.x / 10);  // 10-unit grid cells
-        int gridY = (int) (point.y / 10);
+        int gridX = (int) Math.floor(point.x / 10.0);  // 10-unit grid cells
+        int gridY = (int) Math.floor(point.y / 10.0);
         return gridX + "," + gridY;
     }
     
@@ -479,10 +489,45 @@ public class SearchPattern {
      * Parse cell key back to approximate position
      */
     private Point2D parseCellKey(String cellKey) {
+        // Defensive parsing to avoid NumberFormatException for malformed keys
+        if (cellKey == null || cellKey.isEmpty()) {
+            double cx = centerPoint != null ? centerPoint.x : 0.0;
+            double cy = centerPoint != null ? centerPoint.y : 0.0;
+            return new Point2D(cx, cy);
+        }
         String[] parts = cellKey.split(",");
-        double x = Double.parseDouble(parts[0]) * 10 + 5;
-        double y = Double.parseDouble(parts[1]) * 10 + 5;
-        return new Point2D(x, y);
+        if (parts.length < 2) {
+            double cx = centerPoint != null ? centerPoint.x : 0.0;
+            double cy = centerPoint != null ? centerPoint.y : 0.0;
+            return new Point2D(cx, cy);
+        }
+
+        // Trim parts and try to parse safely; provide fallback to centerPoint
+        String partX = parts[0] != null ? parts[0].trim() : "";
+        String partY = parts[1] != null ? parts[1].trim() : "";
+        double cx = centerPoint != null ? centerPoint.x : 0.0;
+        double cy = centerPoint != null ? centerPoint.y : 0.0;
+
+        try {
+            double gx = Double.parseDouble(partX);
+            double gy = Double.parseDouble(partY);
+            return new Point2D(gx * 10 + 5, gy * 10 + 5);
+        } catch (NumberFormatException e) {
+            // Fallback: attempt to extract integer groups from the strings (e.g., "x:12")
+            try {
+                java.util.regex.Pattern p = java.util.regex.Pattern.compile("(-?\\d+)");
+                java.util.regex.Matcher mx = p.matcher(partX);
+                java.util.regex.Matcher my = p.matcher(partY);
+                if (mx.find() && my.find()) {
+                    double gx = Double.parseDouble(mx.group(1));
+                    double gy = Double.parseDouble(my.group(1));
+                    return new Point2D(gx * 10 + 5, gy * 10 + 5);
+                }
+            } catch (Exception ignored) {
+                // ignore and fall through to return center
+            }
+            return new Point2D(cx, cy);
+        }
     }
     
     /**

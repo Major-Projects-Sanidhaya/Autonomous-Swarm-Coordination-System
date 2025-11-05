@@ -137,7 +137,7 @@ public class ObstacleAvoidance {
      * EXECUTE COLLECTIVE MANEUVER
      */
     public List<MovementCommand> executeCollectiveManeuver(AvoidanceManeuver maneuver, 
-                                                           List<AgentState> agents) {
+                                                          List<AgentState> agents) {
         List<MovementCommand> commands = new ArrayList<>();
         
         for (AgentState agent : agents) {
@@ -145,6 +145,10 @@ public class ObstacleAvoidance {
                 agent, maneuver.maneuverWaypoint, agents);
             
             MovementCommand cmd = new MovementCommand();
+            // ensure parameters map is initialized to avoid NullPointerException
+            if (cmd.parameters == null) {
+                cmd.parameters = new HashMap<>();
+            }
             cmd.agentId = agent.agentId;
             cmd.type = MovementType.MOVE_TO_TARGET;
             cmd.parameters.put("target", targetPosition);
@@ -164,7 +168,7 @@ public class ObstacleAvoidance {
      * Calculate maneuver waypoint
      */
     private Point2D calculateManeuverWaypoint(Point2D swarmCenter, Obstacle obstacle,
-                                             AvoidanceDirection direction) {
+                                              AvoidanceDirection direction) {
         Vector2D toObstacle = new Vector2D(
             obstacle.position.x - swarmCenter.x,
             obstacle.position.y - swarmCenter.y
@@ -343,7 +347,7 @@ public class ObstacleAvoidance {
      * Generate waypoint to avoid obstacle
      */
     private static Point2D generateAvoidanceWaypoint(Point2D start, Point2D goal,
-                                                     Obstacle obstacle) {
+                                                    Obstacle obstacle) {
         Vector2D toGoal = new Vector2D(goal.x - start.x, goal.y - start.y);
         Vector2D perpendicular = new Vector2D(-toGoal.y, toGoal.x);
         
