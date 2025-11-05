@@ -145,10 +145,6 @@ public class ObstacleAvoidance {
                 agent, maneuver.maneuverWaypoint, agents);
             
             MovementCommand cmd = new MovementCommand();
-            // ensure parameters map is initialized to avoid NullPointerException
-            if (cmd.parameters == null) {
-                cmd.parameters = new HashMap<>();
-            }
             cmd.agentId = agent.agentId;
             cmd.type = MovementType.MOVE_TO_TARGET;
             cmd.parameters.put("target", targetPosition);
