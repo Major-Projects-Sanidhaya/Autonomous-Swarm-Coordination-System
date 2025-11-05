@@ -1,4 +1,4 @@
-  /**
+/**
  * COORDINATIONTEST CLASS - Week 5-6 Advanced Coordination Validation
  *
  * PURPOSE:

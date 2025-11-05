@@ -211,7 +211,9 @@ public class LeaderFollower {
     public void addFollower(int agentId, double offsetX, double offsetY) {
         FollowerState state = new FollowerState(agentId);
         state.offsetFromLeader = new Vector2D(offsetX, offsetY);
-        state.followDistance = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
+        double dist = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
+        // If offsets are zero (agent exactly at leader), use default follow distance
+        state.followDistance = dist < 0.001 ? DEFAULT_FOLLOW_DISTANCE : dist;
         
         followers.put(agentId, state);
         
@@ -501,6 +503,13 @@ public class LeaderFollower {
     
     public List<Integer> getLeadershipHistory() {
         return new ArrayList<>(leadershipHistory);
+    }
+
+    /**
+     * Get the reason the current leader was selected (may be null if none)
+     */
+    public LeaderSelectionReason getSelectionReason() {
+        return selectionReason;
     }
     
     public long getLeadershipDuration() {
