@@ -402,25 +402,3 @@ public class Task {
         );
     }
 }
-
-/**
- * TASKTYPE ENUM - Categories of work
- */
-enum TaskType {
-    MOVE_TO_WAYPOINT,    // Simple navigation
-    PATROL_AREA,         // Area monitoring
-    SEARCH_PATTERN,      // Systematic search
-    MAINTAIN_FORMATION,  // Formation flying
-    FOLLOW_LEADER,       // Follow another agent
-    GUARD_POSITION,      // Static guard duty
-    SCOUT_AHEAD          // Forward exploration
-}
-
-/**
- * TASKPRIORITY ENUM - Urgency levels
- */
-enum TaskPriority {
-    HIGH,      // Critical, execute immediately
-    NORMAL,    // Standard priority
-    LOW        // Optional, execute when available
-}

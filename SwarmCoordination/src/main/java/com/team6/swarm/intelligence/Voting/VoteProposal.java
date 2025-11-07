@@ -233,24 +233,3 @@ public class VoteProposal {
         );
     }
 }
-
-/**
- * PROPOSALTYPE ENUM - Vote Categorization
- */
-enum ProposalType {
-    NAVIGATION,      // Path and obstacle decisions
-    FORMATION,       // Shape and spacing changes
-    MISSION,         // Task and priority decisions
-    EMERGENCY,       // Safety and abort decisions
-    COORDINATION     // Timing and synchronization
-}
-
-/**
- * PROPOSALSTATE ENUM - Lifecycle Tracking
- */
-enum ProposalState {
-    ACTIVE,          // Currently collecting votes
-    COMPLETED,       // Consensus reached
-    EXPIRED,         // Deadline passed
-    CANCELLED        // Manually cancelled
-}
