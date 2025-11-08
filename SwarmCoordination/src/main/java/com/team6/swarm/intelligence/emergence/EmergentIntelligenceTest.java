@@ -320,8 +320,7 @@ public class EmergentIntelligenceTest {
         System.out.println("TEST 6: Complete Voting Workflow");
         System.out.println("--------------------------------");
         
-        SwarmCoordinator coordinator = new SwarmCoordinator();
-        VotingSystem voting = coordinator.getVotingSystem();
+    SwarmCoordinator coordinator = new SwarmCoordinator();
         
         // Initiate a navigation vote
         System.out.println("Initiating navigation vote: Go left or right?");
@@ -398,10 +397,10 @@ public class EmergentIntelligenceTest {
         adaptive.enableAdaptation();
         
         // Simulate poor performance - high collision rate
-        PerformanceMetrics metrics = new PerformanceMetrics();
-        metrics.collisionRate = 0.08;  // 8% collision rate (target: 2%)
-        metrics.swarmCohesion = 0.65;  // Low cohesion (target: 0.8)
-        metrics.movementJitter = 0.4;  // High jitter
+    PerformanceMetrics metrics = new PerformanceMetrics();
+    metrics.setCollisionRate(0.08);  // 8% collision rate (target: 2%)
+    metrics.setSwarmCohesion(0.65);  // Low cohesion (target: 0.8)
+    metrics.setMovementJitter(0.4);  // High jitter
         
         System.out.println();
         System.out.println("Simulating poor performance:");
@@ -537,9 +536,9 @@ public class EmergentIntelligenceTest {
             PerformanceMetrics metrics = new PerformanceMetrics();
             
             // Gradually improve metrics
-            metrics.collisionRate = 0.08 - (i * 0.006);  // 8% -> 2.6%
-            metrics.swarmCohesion = 0.65 + (i * 0.02);   // 0.65 -> 0.87
-            metrics.movementJitter = 0.4 - (i * 0.025);  // 0.4 -> 0.1
+            metrics.setCollisionRate(0.08 - (i * 0.006));  // 8% -> 2.6%
+            metrics.setSwarmCohesion(0.65 + (i * 0.02));   // 0.65 -> 0.87
+            metrics.setMovementJitter(0.4 - (i * 0.025));  // 0.4 -> 0.1
             
             adaptive.update(metrics);
             

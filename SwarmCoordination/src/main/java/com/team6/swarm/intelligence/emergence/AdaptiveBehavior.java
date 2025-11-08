@@ -185,50 +185,50 @@ public class AdaptiveBehavior {
         boolean adjusted = false;
         
         // Adapt separation weight based on collision rate
-        if (metrics.collisionRate > TARGET_COLLISION_RATE) {
+        if (metrics.getCollisionRate() > TARGET_COLLISION_RATE) {
             // Too many collisions - increase separation
             params.separationWeight *= (1 + ADJUSTMENT_RATE);
             System.out.println(String.format(
                 "Adaptation: Increasing separation weight to %.2f (collisions: %.1f%%)",
-                params.separationWeight, metrics.collisionRate * 100
+                params.separationWeight, metrics.getCollisionRate() * 100
             ));
             adjusted = true;
-        } else if (metrics.collisionRate < TARGET_COLLISION_RATE * 0.5) {
+        } else if (metrics.getCollisionRate() < TARGET_COLLISION_RATE * 0.5) {
             // Very few collisions - can reduce separation slightly
             params.separationWeight *= (1 - ADJUSTMENT_RATE * 0.5);
             adjusted = true;
         }
         
         // Adapt cohesion weight based on swarm dispersion
-        if (metrics.swarmCohesion < TARGET_COHESION) {
+        if (metrics.getSwarmCohesion() < TARGET_COHESION) {
             // Swarm too spread out - increase cohesion
             params.cohesionWeight *= (1 + ADJUSTMENT_RATE);
             System.out.println(String.format(
                 "Adaptation: Increasing cohesion weight to %.2f (cohesion: %.2f)",
-                params.cohesionWeight, metrics.swarmCohesion
+                params.cohesionWeight, metrics.getSwarmCohesion()
             ));
             adjusted = true;
-        } else if (metrics.swarmCohesion > 0.95) {
+        } else if (metrics.getSwarmCohesion() > 0.95) {
             // Swarm too tight - reduce cohesion
             params.cohesionWeight *= (1 - ADJUSTMENT_RATE * 0.5);
             adjusted = true;
         }
         
         // Adapt alignment for smooth movement
-        if (metrics.movementJitter > 0.3) {
+        if (metrics.getMovementJitter() > 0.3) {
             // Jittery movement - increase alignment
             params.alignmentWeight *= (1 + ADJUSTMENT_RATE);
             System.out.println(String.format(
                 "Adaptation: Increasing alignment weight to %.2f (jitter: %.2f)",
-                params.alignmentWeight, metrics.movementJitter
+                params.alignmentWeight, metrics.getMovementJitter()
             ));
             adjusted = true;
         }
         
         // Ensure parameters stay in valid range
-        params.separationWeight = Math.max(0.5, Math.min(3.0, params.separationWeight));
-        params.cohesionWeight = Math.max(0.5, Math.min(2.5, params.cohesionWeight));
-        params.alignmentWeight = Math.max(0.5, Math.min(2.0, params.alignmentWeight));
+    params.separationWeight = Math.max(0.5, Math.min(3.0, params.separationWeight));
+    params.cohesionWeight = Math.max(0.5, Math.min(2.5, params.cohesionWeight));
+    params.alignmentWeight = Math.max(0.5, Math.min(2.0, params.alignmentWeight));
         
         // Apply changes
         if (adjusted) {
@@ -248,32 +248,32 @@ public class AdaptiveBehavior {
         boolean adjusted = false;
         
         // Adapt consensus threshold based on completion rate
-        if (metrics.voteCompletionRate < TARGET_VOTE_COMPLETION) {
+        if (metrics.getVoteCompletionRate() < TARGET_VOTE_COMPLETION) {
             // Too many failed votes - lower threshold
             params.consensusThreshold *= (1 - ADJUSTMENT_RATE);
             System.out.println(String.format(
                 "Adaptation: Lowering consensus threshold to %.0f%% (completion: %.0f%%)",
-                params.consensusThreshold * 100, metrics.voteCompletionRate * 100
+                params.consensusThreshold * 100, metrics.getVoteCompletionRate() * 100
             ));
             adjusted = true;
-        } else if (metrics.voteCompletionRate > 0.98 && params.consensusThreshold < 0.7) {
+        } else if (metrics.getVoteCompletionRate() > 0.98 && params.consensusThreshold < 0.7) {
             // Very high completion - can raise threshold
             params.consensusThreshold *= (1 + ADJUSTMENT_RATE * 0.5);
             adjusted = true;
         }
         
         // Adapt voting timeout based on response time
-        if (metrics.averageVoteTime > params.votingTimeout * 0.9) {
-            // Votes taking too long - increase timeout
-            params.votingTimeout *= 1.2;
+        if (metrics.getAverageVoteTime() > params.votingTimeout * 0.9) {
+            // Votes taking too long - increase timeout (use explicit cast to avoid lossy compound assignment)
+            params.votingTimeout = (long) (params.votingTimeout * 1.2);
             System.out.println(String.format(
                 "Adaptation: Increasing vote timeout to %dms",
                 params.votingTimeout
             ));
             adjusted = true;
-        } else if (metrics.averageVoteTime < params.votingTimeout * 0.5) {
-            // Votes complete quickly - can reduce timeout
-            params.votingTimeout *= 0.9;
+        } else if (metrics.getAverageVoteTime() < params.votingTimeout * 0.5) {
+            // Votes complete quickly - can reduce timeout (explicit cast)
+            params.votingTimeout = (long) (params.votingTimeout * 0.9);
             adjusted = true;
         }
         
@@ -298,7 +298,7 @@ public class AdaptiveBehavior {
         boolean adjusted = false;
         
         // Check workload balance
-        if (!metrics.workloadBalanced) {
+        if (!metrics.isWorkloadBalanced()) {
             System.out.println("Adaptation: Workload imbalanced - triggering redistribution");
             // Trigger task redistribution
             // coordinator.getTaskAllocator().redistributeTasks(agents);
@@ -306,10 +306,10 @@ public class AdaptiveBehavior {
         }
         
         // Adapt based on task completion rate
-        if (metrics.taskCompletionRate < 0.7) {
+        if (metrics.getTaskCompletionRate() < 0.7) {
             System.out.println(String.format(
                 "Adaptation: Low task completion rate (%.0f%%) - reviewing assignments",
-                metrics.taskCompletionRate * 100
+                metrics.getTaskCompletionRate() * 100
             ));
             // Could adjust battery thresholds or distance scoring
             adjusted = true;
@@ -348,11 +348,11 @@ public class AdaptiveBehavior {
         }
         
         // Compare recent performance to earlier performance
-        double recentCohesion = getRecentAverage(s -> s.metrics.swarmCohesion, 5);
-        double earlierCohesion = getRecentAverage(s -> s.metrics.swarmCohesion, 10);
+    double recentCohesion = getRecentAverage(s -> s.getMetrics().getSwarmCohesion(), 5);
+    double earlierCohesion = getRecentAverage(s -> s.getMetrics().getSwarmCohesion(), 10);
         
-        double recentCompletion = getRecentAverage(s -> s.metrics.taskCompletionRate, 5);
-        double earlierCompletion = getRecentAverage(s -> s.metrics.taskCompletionRate, 10);
+    double recentCompletion = getRecentAverage(s -> s.getMetrics().getTaskCompletionRate(), 5);
+    double earlierCompletion = getRecentAverage(s -> s.getMetrics().getTaskCompletionRate(), 10);
         
         // Calculate trend
         double cohesionChange = recentCohesion - earlierCohesion;

@@ -531,7 +531,6 @@ public class SwarmCoordinator {
         
         System.out.println("Coordination mode changing: " + currentMode + " -> " + mode);
         
-        CoordinationMode previousMode = currentMode;
         currentMode = mode;
         
         // Apply mode-specific adjustments

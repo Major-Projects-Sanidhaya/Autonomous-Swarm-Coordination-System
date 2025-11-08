@@ -14,6 +14,7 @@ package com.team6.swarm.intelligence.emergence;
 
 import com.team6.swarm.core.*;
 import com.team6.swarm.intelligence.formation.FormationType;
+import com.team6.swarm.intelligence.formation.Formation;
 import java.util.*;
 
 public class FormationController {
@@ -24,9 +25,10 @@ public class FormationController {
     }
     
     public Formation createFormation(FormationType type, Point2D center, List<Integer> agentIds) {
-        Formation formation = new Formation("form_" + System.currentTimeMillis(), type);
-        formation.centerPoint = center;
-        formation.participatingAgents = new ArrayList<>(agentIds);
+        // Use the Formation class from the formation package. Provide reasonable defaults for spacing and heading.
+        double defaultSpacing = 50.0;
+        double defaultHeading = 0.0;
+        Formation formation = new Formation(type, center, defaultSpacing, defaultHeading, new ArrayList<>(agentIds));
         activeFormations.put(formation.formationId, formation);
         return formation;
     }
@@ -48,19 +50,4 @@ public class FormationController {
         System.out.println("Transitioning formation " + formationId + " to " + newType);
     }
 }
-
-/**
- * FORMATION CLASS - Simplified for Week 7-8
- */
-class Formation {
-    public String formationId;
-    public FormationType formationType;
-    public Point2D centerPoint;
-    public List<Integer> participatingAgents;
-    
-    public Formation(String id, FormationType type) {
-        this.formationId = id;
-        this.formationType = type;
-        this.participatingAgents = new ArrayList<>();
-    }
-}
+ 

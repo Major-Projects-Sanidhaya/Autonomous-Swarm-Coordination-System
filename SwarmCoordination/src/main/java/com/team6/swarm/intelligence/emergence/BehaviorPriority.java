@@ -181,7 +181,7 @@ public class BehaviorPriority {
         if (highest.priority >= 100) {
             emergencyOverrides++;
             logResolution(agentId, ResolutionType.EMERGENCY_OVERRIDE, 
-                         highest.behaviorType, null);
+                          highest.behaviorType, null);
             clearBehaviors(agentId);
             return highest.command;
         }
@@ -191,14 +191,14 @@ public class BehaviorPriority {
             successfulBlends++;
             MovementCommand blended = blendBehaviors(agentId, behaviors);
             logResolution(agentId, ResolutionType.WEIGHTED_BLEND,
-                         highest.behaviorType, getBehaviorTypes(behaviors));
+                          highest.behaviorType, getBehaviorTypes(behaviors));
             clearBehaviors(agentId);
             return blended;
         }
         
         // Default: highest priority wins
         logResolution(agentId, ResolutionType.PRIORITY_OVERRIDE,
-                     highest.behaviorType, null);
+                      highest.behaviorType, null);
         clearBehaviors(agentId);
         return highest.command;
     }
@@ -220,7 +220,7 @@ public class BehaviorPriority {
         if (highest.priority >= 90) {
             // RETURNING can blend slightly with obstacle avoidance
             return highest.behaviorType == BehaviorType.RETURNING &&
-                   behaviors.stream().anyMatch(b -> b.behaviorType == BehaviorType.EVADING);
+                    behaviors.stream().anyMatch(b -> b.behaviorType == BehaviorType.EVADING);
         }
         
         // Check compatibility matrix
@@ -246,22 +246,22 @@ public class BehaviorPriority {
             case FLOCKING:
                 // Flocking blends well with most behaviors
                 return type2 == BehaviorType.FORMATION ||
-                       type2 == BehaviorType.LEADER ||
-                       type2 == BehaviorType.FOLLOWER ||
-                       type2 == BehaviorType.SCOUT ||
-                       type2 == BehaviorType.GUARD;
+                        type2 == BehaviorType.LEADER ||
+                        type2 == BehaviorType.FOLLOWER ||
+                        type2 == BehaviorType.SCOUT ||
+                        type2 == BehaviorType.GUARD;
                 
             case FORMATION:
                 // Formation can blend with coordination behaviors
                 return type2 == BehaviorType.FLOCKING ||
-                       type2 == BehaviorType.LEADER ||
-                       type2 == BehaviorType.FOLLOWER ||
-                       type2 == BehaviorType.GUARD;
+                        type2 == BehaviorType.LEADER ||
+                        type2 == BehaviorType.FOLLOWER ||
+                        type2 == BehaviorType.GUARD;
                 
             case LEADER:
                 // Leader can blend with flocking and formation
                 return type2 == BehaviorType.FLOCKING ||
-                       type2 == BehaviorType.FORMATION;
+                        type2 == BehaviorType.FORMATION;
                 
             case SCOUT:
                 // Scout can maintain flocking
@@ -270,7 +270,7 @@ public class BehaviorPriority {
             case GUARD:
                 // Guard can maintain formation and flock
                 return type2 == BehaviorType.FLOCKING ||
-                       type2 == BehaviorType.FORMATION;
+                        type2 == BehaviorType.FORMATION;
                 
             case RETURNING:
                 // Returning only blends with emergency avoidance
