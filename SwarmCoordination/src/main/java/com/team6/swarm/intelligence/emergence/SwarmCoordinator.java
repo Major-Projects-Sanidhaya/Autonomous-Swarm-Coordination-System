@@ -310,10 +310,10 @@ public class SwarmCoordinator {
      * Maintain formation integrity
      */
     private void updateFormations(List<AgentState> agents) {
-        // Get active formations
-        Map<String, Formation> formations = formationController.getActiveFormations();
-        
-        for (Formation formation : formations.values()) {
+        // Get active formations from the formation controller
+        Collection<Formation> formations = formationController.getAllFormations();
+
+        for (Formation formation : formations) {
             // Check formation integrity
             double cohesion = formationController.getFormationCohesion(formation, agents);
             
@@ -344,6 +344,12 @@ public class SwarmCoordinator {
      */
     public Formation createFormation(FormationType type, Point2D center, 
                                     List<Integer> agentIds) {
+        if (agentIds == null || agentIds.isEmpty()) {
+            throw new IllegalArgumentException("agentIds must not be null or empty");
+        }
+        if (agentIds == null || agentIds.isEmpty()) {
+            throw new IllegalArgumentException("agentIds must not be null or empty");
+        }
         return formationController.createFormation(type, center, agentIds);
     }
     
@@ -352,7 +358,13 @@ public class SwarmCoordinator {
      * Smoothly change formation shape
      */
     public void transitionFormation(String formationId, FormationType newType) {
-        formationController.transitionFormation(formationId, newType);
+        Formation current = formationController.getFormation(formationId);
+        if (current == null) {
+            throw new IllegalArgumentException("Unknown formationId: " + formationId);
+        }
+        // Use a sensible default duration for transitions (5 seconds)
+        long defaultDurationMs = 5000L;
+        formationController.transitionFormation(current, newType, defaultDurationMs);
     }
     
     // ==================== EMERGENCY HANDLING ====================
@@ -365,9 +377,10 @@ public class SwarmCoordinator {
         for (AgentState agent : agents) {
             // Check battery level
             if (agent.batteryLevel < 0.15 && agent.status == AgentStatus.ACTIVE) {
-                handleEmergency(EmergencyType.CRITICAL_BATTERY, 
+                handleEmergency(EmergencyType.CRITICAL_BATTERY,
                               Arrays.asList(agent.agentId));
             }
+            // if (detectImminentCollision(agent)) {
             
             // Check for collisions (placeholder - needs sensor data)
             // if (detectImminent Collision(agent)) {
@@ -694,17 +707,18 @@ public class SwarmCoordinator {
      * Comprehensive status report
      */
     public CoordinatorStatus getStatus() {
-        CoordinatorStatus status = new CoordinatorStatus();
-        status.mode = currentMode;
-        status.active = coordinationActive;
-        status.updateCount = updateCount;
-        status.averageUpdateTime = averageUpdateTime;
-        status.emergencyCount = emergencyResponseCount;
-        
-        status.totalTasksAssigned = taskAllocator.getTotalTasksAssigned();
-        status.totalVotesProcessed = votingSystem.getTotalVotesProcessed();
-        status.flockingCalculations = flockingController.getCalculationsPerformed();
-        status.behaviorConflicts = behaviorPriority.getTotalConflicts();
+    CoordinatorStatus status = new CoordinatorStatus();
+    // Use package-private setters to populate the status snapshot (fields are intentionally encapsulated).
+    status.setMode(currentMode);
+    status.setActive(coordinationActive);
+    status.setUpdateCount(updateCount);
+    status.setAverageUpdateTime(averageUpdateTime);
+    status.setEmergencyCount(emergencyResponseCount);
+
+    status.setTotalTasksAssigned(taskAllocator.getTotalTasksAssigned());
+    status.setTotalVotesProcessed(votingSystem.getTotalVotesProcessed());
+    status.setFlockingCalculations(flockingController.getCalculationsPerformed());
+    status.setBehaviorConflicts(behaviorPriority.getTotalConflicts());
         
         return status;
     }

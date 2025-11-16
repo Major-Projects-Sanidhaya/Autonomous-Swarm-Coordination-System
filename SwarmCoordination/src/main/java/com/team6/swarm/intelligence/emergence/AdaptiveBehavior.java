@@ -96,8 +96,8 @@ public class AdaptiveBehavior {
     private long lastAdaptationTime;
     private static final long ADAPTATION_INTERVAL = 5000;  // 5 seconds
     
-    // Performance history
-    private List<PerformanceSnapshot> performanceHistory;
+    // Performance history (thread-safe)
+    private final List<PerformanceSnapshot> performanceHistory = Collections.synchronizedList(new ArrayList<>());
     private static final int MAX_HISTORY = 20;
     
     // Adaptation parameters
@@ -119,7 +119,7 @@ public class AdaptiveBehavior {
         this.coordinator = coordinator;
         this.adaptationEnabled = false;
         this.lastAdaptationTime = System.currentTimeMillis();
-        this.performanceHistory = new ArrayList<>();
+        // performanceHistory already initialized as a synchronized list
         this.flockingAdjustments = 0;
         this.votingAdjustments = 0;
         this.taskAdjustments = 0;
@@ -184,51 +184,68 @@ public class AdaptiveBehavior {
         FlockingParameters params = coordinator.getFlockingController().getParameters();
         boolean adjusted = false;
         
-        // Adapt separation weight based on collision rate
-        if (metrics.getCollisionRate() > TARGET_COLLISION_RATE) {
-            // Too many collisions - increase separation
-            params.separationWeight *= (1 + ADJUSTMENT_RATE);
-            System.out.println(String.format(
-                "Adaptation: Increasing separation weight to %.2f (collisions: %.1f%%)",
-                params.separationWeight, metrics.getCollisionRate() * 100
-            ));
-            adjusted = true;
-        } else if (metrics.getCollisionRate() < TARGET_COLLISION_RATE * 0.5) {
-            // Very few collisions - can reduce separation slightly
-            params.separationWeight *= (1 - ADJUSTMENT_RATE * 0.5);
-            adjusted = true;
-        }
-        
-        // Adapt cohesion weight based on swarm dispersion
-        if (metrics.getSwarmCohesion() < TARGET_COHESION) {
-            // Swarm too spread out - increase cohesion
-            params.cohesionWeight *= (1 + ADJUSTMENT_RATE);
-            System.out.println(String.format(
-                "Adaptation: Increasing cohesion weight to %.2f (cohesion: %.2f)",
-                params.cohesionWeight, metrics.getSwarmCohesion()
-            ));
-            adjusted = true;
-        } else if (metrics.getSwarmCohesion() > 0.95) {
-            // Swarm too tight - reduce cohesion
-            params.cohesionWeight *= (1 - ADJUSTMENT_RATE * 0.5);
-            adjusted = true;
-        }
-        
-        // Adapt alignment for smooth movement
-        if (metrics.getMovementJitter() > 0.3) {
-            // Jittery movement - increase alignment
-            params.alignmentWeight *= (1 + ADJUSTMENT_RATE);
-            System.out.println(String.format(
-                "Adaptation: Increasing alignment weight to %.2f (jitter: %.2f)",
-                params.alignmentWeight, metrics.getMovementJitter()
-            ));
-            adjusted = true;
-        }
-        
-        // Ensure parameters stay in valid range
-    params.separationWeight = Math.max(0.5, Math.min(3.0, params.separationWeight));
-    params.cohesionWeight = Math.max(0.5, Math.min(2.5, params.cohesionWeight));
-    params.alignmentWeight = Math.max(0.5, Math.min(2.0, params.alignmentWeight));
+      // Adapt separation weight based on collision rate
+      if (metrics.getCollisionRate() > TARGET_COLLISION_RATE) {
+          // Too many collisions - increase separation
+          params.separationWeight *= (1 + ADJUSTMENT_RATE);
+          System.out.println(String.format(
+              "Adaptation: Increasing separation weight to %.2f (collisions: %.1f%%)",
+              params.separationWeight, metrics.getCollisionRate() * 100
+          ));
+          adjusted = true;
+      } else if (metrics.getCollisionRate() < TARGET_COLLISION_RATE * 0.5) {
+          // Very few collisions - can reduce separation slightly
+          params.separationWeight *= (1 - ADJUSTMENT_RATE * 0.5);
+          adjusted = true;
+      }
+      
+      // Adapt cohesion weight based on swarm dispersion
+      if (metrics.getSwarmCohesion() < TARGET_COHESION) {
+          // Swarm too spread out - increase cohesion
+          params.cohesionWeight *= (1 + ADJUSTMENT_RATE);
+          System.out.println(String.format(
+              "Adaptation: Increasing cohesion weight to %.2f (cohesion: %.2f)",
+              params.cohesionWeight, metrics.getSwarmCohesion()
+          ));
+          adjusted = true;
+      } else if (metrics.getSwarmCohesion() > 0.95) {
+          // Swarm too tight - reduce cohesion
+          params.cohesionWeight *= (1 - ADJUSTMENT_RATE * 0.5);
+          adjusted = true;
+      }
+      
+      // Adapt alignment for smooth movement
+      if (metrics.getMovementJitter() > 0.3) {
+          // Jittery movement - increase alignment
+          params.alignmentWeight *= (1 + ADJUSTMENT_RATE);
+          System.out.println(String.format(
+              "Adaptation: Increasing alignment weight to %.2f (jitter: %.2f)",
+              params.alignmentWeight, metrics.getMovementJitter()
+          ));
+          adjusted = true;
+      }
+      
+    // Ensure parameters stay in valid range
+    // Named bounds for readability/maintainability (local constants)
+    final double MIN_SEPARATION_WEIGHT = 0.5;
+    final double MAX_SEPARATION_WEIGHT = 3.0;
+    final double MIN_COHESION_WEIGHT = 0.5;
+    final double MAX_COHESION_WEIGHT = 2.5;
+    final double MIN_ALIGNMENT_WEIGHT = 0.5;
+    final double MAX_ALIGNMENT_WEIGHT = 2.0;
+
+    params.separationWeight = Math.max(
+      MIN_SEPARATION_WEIGHT,
+      Math.min(MAX_SEPARATION_WEIGHT, params.separationWeight)
+    );
+    params.cohesionWeight = Math.max(
+      MIN_COHESION_WEIGHT,
+      Math.min(MAX_COHESION_WEIGHT, params.cohesionWeight)
+    );
+    params.alignmentWeight = Math.max(
+      MIN_ALIGNMENT_WEIGHT,
+      Math.min(MAX_ALIGNMENT_WEIGHT, params.alignmentWeight)
+    );
         
         // Apply changes
         if (adjusted) {
@@ -250,7 +267,8 @@ public class AdaptiveBehavior {
         // Adapt consensus threshold based on completion rate
         if (metrics.getVoteCompletionRate() < TARGET_VOTE_COMPLETION) {
             // Too many failed votes - lower threshold
-            params.consensusThreshold *= (1 - ADJUSTMENT_RATE);
+            // Use explicit assignment for consistency (consensusThreshold is a double)
+            params.consensusThreshold = params.consensusThreshold * (1 - ADJUSTMENT_RATE);
             System.out.println(String.format(
                 "Adaptation: Lowering consensus threshold to %.0f%% (completion: %.0f%%)",
                 params.consensusThreshold * 100, metrics.getVoteCompletionRate() * 100
@@ -258,7 +276,7 @@ public class AdaptiveBehavior {
             adjusted = true;
         } else if (metrics.getVoteCompletionRate() > 0.98 && params.consensusThreshold < 0.7) {
             // Very high completion - can raise threshold
-            params.consensusThreshold *= (1 + ADJUSTMENT_RATE * 0.5);
+            params.consensusThreshold = params.consensusThreshold * (1 + ADJUSTMENT_RATE * 0.5);
             adjusted = true;
         }
         
@@ -327,60 +345,71 @@ public class AdaptiveBehavior {
      * Store snapshot for trend analysis
      */
     private void recordPerformance(PerformanceMetrics metrics) {
-        PerformanceSnapshot snapshot = new PerformanceSnapshot(
-            metrics, System.currentTimeMillis());
-        
-        performanceHistory.add(snapshot);
-        
-        // Keep only recent history
-        if (performanceHistory.size() > MAX_HISTORY) {
-            performanceHistory.remove(0);
+      PerformanceSnapshot snapshot = new PerformanceSnapshot(
+          metrics, System.currentTimeMillis());
+      
+      synchronized (performanceHistory) {
+          // Avoid very-high-frequency duplicate samples (helps make windowed comparisons more meaningful)
+          if (!performanceHistory.isEmpty()) {
+        long lastTs = performanceHistory.get(performanceHistory.size() - 1).getTimestamp();
+        if (snapshot.getTimestamp() - lastTs < 50) { // skip samples closer than 50ms
+            return;
         }
+          }
+
+          performanceHistory.add(snapshot);
+
+          // Keep only recent history (bounded queue)
+          while (performanceHistory.size() > MAX_HISTORY) {
+        performanceHistory.remove(0);
+          }
+      }
     }
     
     /**
      * GET PERFORMANCE TREND
-     * Analyze if performance is improving or degrading
-     */
+    **/
     public PerformanceTrend getPerformanceTrend() {
-        if (performanceHistory.size() < 5) {
-            return PerformanceTrend.INSUFFICIENT_DATA;
-        }
+      synchronized (performanceHistory) {
+          if (performanceHistory.size() < 5) {
+              return PerformanceTrend.INSUFFICIENT_DATA;
+          }
+      }
         
-        // Compare recent performance to earlier performance
-    double recentCohesion = getRecentAverage(s -> s.getMetrics().getSwarmCohesion(), 5);
-    double earlierCohesion = getRecentAverage(s -> s.getMetrics().getSwarmCohesion(), 10);
+      // Compare recent performance to earlier performance
+      double recentCohesion = getRecentAverage(s -> s.getMetrics().getSwarmCohesion(), 5);
+      double earlierCohesion = getRecentAverage(s -> s.getMetrics().getSwarmCohesion(), 10);
+          
+      double recentCompletion = getRecentAverage(s -> s.getMetrics().getTaskCompletionRate(), 5);
+      double earlierCompletion = getRecentAverage(s -> s.getMetrics().getTaskCompletionRate(), 10);
         
-    double recentCompletion = getRecentAverage(s -> s.getMetrics().getTaskCompletionRate(), 5);
-    double earlierCompletion = getRecentAverage(s -> s.getMetrics().getTaskCompletionRate(), 10);
+      // Calculate trend
+      double cohesionChange = recentCohesion - earlierCohesion;
+      double completionChange = recentCompletion - earlierCompletion;
         
-        // Calculate trend
-        double cohesionChange = recentCohesion - earlierCohesion;
-        double completionChange = recentCompletion - earlierCompletion;
-        
-        if (cohesionChange > 0.05 || completionChange > 0.05) {
-            return PerformanceTrend.IMPROVING;
-        } else if (cohesionChange < -0.05 || completionChange < -0.05) {
-            return PerformanceTrend.DEGRADING;
-        } else {
-            return PerformanceTrend.STABLE;
-        }
+      if (cohesionChange > 0.05 || completionChange > 0.05) {
+          return PerformanceTrend.IMPROVING;
+      } else if (cohesionChange < -0.05 || completionChange < -0.05) {
+          return PerformanceTrend.DEGRADING;
+      } else {
+          return PerformanceTrend.STABLE;
+      }
     }
-    
-    /**
-     * Get recent average of metric
-     */
+
     private double getRecentAverage(
             java.util.function.Function<PerformanceSnapshot, Double> extractor, 
             int count) {
-        int start = Math.max(0, performanceHistory.size() - count);
-        double sum = 0;
-        int samples = 0;
+      int start;
+      double sum = 0;
+      int samples = 0;
         
-        for (int i = start; i < performanceHistory.size(); i++) {
-            sum += extractor.apply(performanceHistory.get(i));
-            samples++;
-        }
+      synchronized (performanceHistory) {
+          start = Math.max(0, performanceHistory.size() - count);
+          for (int i = start; i < performanceHistory.size(); i++) {
+              sum += extractor.apply(performanceHistory.get(i));
+              samples++;
+          }
+      }
         
         return samples > 0 ? sum / samples : 0.0;
     }
@@ -398,17 +427,22 @@ public class AdaptiveBehavior {
     public int getVotingAdjustments() {
         return votingAdjustments;
     }
-    
+
     public int getTaskAdjustments() {
         return taskAdjustments;
     }
-    
-    public int getTotalAdjustments() {
-        return flockingAdjustments + votingAdjustments + taskAdjustments + formationAdjustments;
+
+    public int getFormationAdjustments() {
+        return formationAdjustments;
     }
     
     public List<PerformanceSnapshot> getPerformanceHistory() {
-        return new ArrayList<>(performanceHistory);
+        synchronized (performanceHistory) {
+            return new ArrayList<>(performanceHistory);
+        }
+    }
+    public int getTotalAdjustments() {
+        return flockingAdjustments + votingAdjustments + taskAdjustments + formationAdjustments;
     }
     
     /**

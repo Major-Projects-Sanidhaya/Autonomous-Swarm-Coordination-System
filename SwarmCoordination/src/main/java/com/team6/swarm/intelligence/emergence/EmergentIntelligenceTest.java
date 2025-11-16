@@ -199,7 +199,7 @@ public class EmergentIntelligenceTest {
         formationCmd.parameters.put("combinedForce", new Vector2D(2.0, 8.0));
         formationCmd.parameters.put("speed", 40.0);  // Add speed parameter
         priority.registerBehavior(agentId, BehaviorType.FORMATION, 60, formationCmd);
-        System.out.println("  - FORMATION with force (2.0, 8.0)");;
+        System.out.println("  - FORMATION with force (2.0, 8.0)");
         
         System.out.println();
         System.out.println("Behaviors are compatible - attempting blend...");
@@ -320,7 +320,7 @@ public class EmergentIntelligenceTest {
         System.out.println("TEST 6: Complete Voting Workflow");
         System.out.println("--------------------------------");
         
-    SwarmCoordinator coordinator = new SwarmCoordinator();
+        SwarmCoordinator coordinator = new SwarmCoordinator();
         
         // Initiate a navigation vote
         System.out.println("Initiating navigation vote: Go left or right?");
@@ -397,10 +397,10 @@ public class EmergentIntelligenceTest {
         adaptive.enableAdaptation();
         
         // Simulate poor performance - high collision rate
-    PerformanceMetrics metrics = new PerformanceMetrics();
-    metrics.setCollisionRate(0.08);  // 8% collision rate (target: 2%)
-    metrics.setSwarmCohesion(0.65);  // Low cohesion (target: 0.8)
-    metrics.setMovementJitter(0.4);  // High jitter
+        PerformanceMetrics metrics = new PerformanceMetrics();
+        metrics.setCollisionRate(0.08);  // 8% collision rate (target: 2%)
+        metrics.setSwarmCohesion(0.65);  // Low cohesion (target: 0.8)
+        metrics.setMovementJitter(0.4);  // High jitter
         
         System.out.println();
         System.out.println("Simulating poor performance:");

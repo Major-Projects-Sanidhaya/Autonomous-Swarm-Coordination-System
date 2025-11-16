@@ -7,11 +7,31 @@ import java.util.*;
  * CONFLICTRESOLUTION - Record of how conflict was resolved
  */
 public class ConflictResolution {
-    public int agentId;
-    public ResolutionType resolutionType;
-    public BehaviorType winningBehavior;
-    public List<BehaviorType> otherBehaviors;
-    public long timestamp;
+    private final int agentId;
+    private final ResolutionType resolutionType;
+    private final BehaviorType winningBehavior;
+    private final List<BehaviorType> otherBehaviors;
+    private final long timestamp;
+    
+    public int getAgentId() {
+      return agentId;
+    }
+
+    public ResolutionType getResolutionType() {
+      return resolutionType;
+    }
+
+    public BehaviorType getWinningBehavior() {
+      return winningBehavior;
+    }
+
+    public List<BehaviorType> getOtherBehaviors() {
+      return Collections.unmodifiableList(new ArrayList<>(otherBehaviors));
+    }
+
+    public long getTimestamp() {
+      return timestamp;
+    }
     
     public ConflictResolution(int agentId, ResolutionType type,
                               BehaviorType winner, List<BehaviorType> others,

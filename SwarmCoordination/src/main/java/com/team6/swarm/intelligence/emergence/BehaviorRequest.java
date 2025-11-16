@@ -7,10 +7,15 @@ import com.team6.swarm.intelligence.flocking.BehaviorType;
  * BEHAVIORREQUEST - Pending behavior for agent
  */
 public class BehaviorRequest {
-    public BehaviorType behaviorType;
-    public int priority;
-    public MovementCommand command;
-    public long timestamp;
+    private final BehaviorType behaviorType;
+    private final int priority;
+    private final MovementCommand command;
+    private final long timestamp;
+
+    public BehaviorType getBehaviorType() { return behaviorType; }
+    public int getPriority() { return priority; }
+    public MovementCommand getCommand() { return command; }
+    public long getTimestamp() { return timestamp; }
     
     public BehaviorRequest(BehaviorType behaviorType, int priority,
                           MovementCommand command, long timestamp) {

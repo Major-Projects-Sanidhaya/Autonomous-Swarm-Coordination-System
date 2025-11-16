@@ -115,10 +115,14 @@ public class BehaviorPriority {
     
     /**
      * Constructor
+     *
+     * Use concurrent collections to allow thread-safe registration/resolution
+     * from multiple threads (e.g., UI and simulation). Individual lists are
+     * created as CopyOnWriteArrayList instances in computeIfAbsent.
      */
     public BehaviorPriority() {
-        this.agentBehaviors = new HashMap<>();
-        this.resolutionHistory = new HashMap<>();
+        this.agentBehaviors = new java.util.concurrent.ConcurrentHashMap<>();
+        this.resolutionHistory = new java.util.concurrent.ConcurrentHashMap<>();
         this.totalConflicts = 0;
         this.emergencyOverrides = 0;
         this.successfulBlends = 0;
@@ -131,11 +135,13 @@ public class BehaviorPriority {
      * Agent wants to perform specific behavior
      */
     public void registerBehavior(int agentId, BehaviorType behaviorType, 
-                                 int priority, MovementCommand command) {
+                                int priority, MovementCommand command) {
         BehaviorRequest request = new BehaviorRequest(
             behaviorType, priority, command, System.currentTimeMillis());
         
-        agentBehaviors.computeIfAbsent(agentId, k -> new ArrayList<>()).add(request);
+        // Use a thread-safe list per agent to avoid race conditions when multiple threads
+        // register behaviors concurrently (matches constructor comment about CopyOnWriteArrayList).
+        agentBehaviors.computeIfAbsent(agentId, k -> new java.util.concurrent.CopyOnWriteArrayList<>()).add(request);
     }
     
     /**
@@ -147,60 +153,63 @@ public class BehaviorPriority {
     }
     
     // ==================== CONFLICT RESOLUTION ====================
-    
+
     /**
      * RESOLVE CONFLICTS
      * Determine which behavior(s) should execute
      *
      * @param agentId Agent with conflicting behaviors
-     * @return Final movement command after resolution
      */
     public MovementCommand resolveConflicts(int agentId) {
-        List<BehaviorRequest> behaviors = agentBehaviors.get(agentId);
-        
-        if (behaviors == null || behaviors.isEmpty()) {
+        List<BehaviorRequest> list = agentBehaviors.get(agentId);
+
+        if (list == null || list.isEmpty()) {
             return null;  // No behaviors to resolve
         }
-        
+
+        // Work on a snapshot copy to avoid mutating the shared per-agent list
+        // (sorting below would otherwise modify the shared collection).
+        List<BehaviorRequest> behaviors = new ArrayList<>(list);
+
         // Single behavior - no conflict
         if (behaviors.size() == 1) {
-            MovementCommand cmd = behaviors.get(0).command;
+            MovementCommand cmd = behaviors.get(0).getCommand();
             clearBehaviors(agentId);
             return cmd;
         }
-        
+
         // Multiple behaviors - resolve conflict
         totalConflicts++;
-        
+
         // Sort by priority (highest first)
-        behaviors.sort((b1, b2) -> Integer.compare(b2.priority, b1.priority));
-        
-        BehaviorRequest highest = behaviors.get(0);
-        
+    behaviors.sort((b1, b2) -> Integer.compare(b2.getPriority(), b1.getPriority()));
+
+    BehaviorRequest highest = behaviors.get(0);
+
         // Check if emergency override needed
-        if (highest.priority >= 100) {
+        if (highest.getPriority() >= 100) {
             emergencyOverrides++;
-            logResolution(agentId, ResolutionType.EMERGENCY_OVERRIDE, 
-                          highest.behaviorType, null);
+            logResolution(agentId, ResolutionType.EMERGENCY_OVERRIDE,
+                          highest.getBehaviorType(), null);
             clearBehaviors(agentId);
-            return highest.command;
+            return highest.getCommand();
         }
-        
+
         // Check if blending possible
         if (canBlendBehaviors(behaviors)) {
             successfulBlends++;
             MovementCommand blended = blendBehaviors(agentId, behaviors);
             logResolution(agentId, ResolutionType.WEIGHTED_BLEND,
-                          highest.behaviorType, getBehaviorTypes(behaviors));
+                          highest.getBehaviorType(), getBehaviorTypes(behaviors));
             clearBehaviors(agentId);
             return blended;
         }
-        
+
         // Default: highest priority wins
         logResolution(agentId, ResolutionType.PRIORITY_OVERRIDE,
-                      highest.behaviorType, null);
+                      highest.getBehaviorType(), null);
         clearBehaviors(agentId);
-        return highest.command;
+        return highest.getCommand();
     }
     
     /**
@@ -210,22 +219,22 @@ public class BehaviorPriority {
     private boolean canBlendBehaviors(List<BehaviorRequest> behaviors) {
         if (behaviors.size() < 2) return false;
         
-        // Get highest priority behavior
-        BehaviorRequest highest = behaviors.get(0);
-        
-        // Emergency behaviors cannot blend
-        if (highest.priority >= 100) return false;
-        
-        // Critical behaviors have limited blending
-        if (highest.priority >= 90) {
-            // RETURNING can blend slightly with obstacle avoidance
-            return highest.behaviorType == BehaviorType.RETURNING &&
-                    behaviors.stream().anyMatch(b -> b.behaviorType == BehaviorType.EVADING);
-        }
+    // Get highest priority behavior
+    BehaviorRequest highest = behaviors.get(0);
+
+    // Emergency behaviors cannot blend
+    if (highest.getPriority() >= 100) return false;
+
+    // Critical behaviors have limited blending
+    if (highest.getPriority() >= 90) {
+        // RETURNING can blend slightly with obstacle avoidance
+        return highest.getBehaviorType() == BehaviorType.RETURNING &&
+            behaviors.stream().anyMatch(b -> b.getBehaviorType() == BehaviorType.EVADING);
+    }
         
         // Check compatibility matrix
         for (int i = 1; i < behaviors.size(); i++) {
-            if (!areCompatible(highest.behaviorType, behaviors.get(i).behaviorType)) {
+            if (!areCompatible(highest.getBehaviorType(), behaviors.get(i).getBehaviorType())) {
                 return false;
             }
         }
@@ -300,7 +309,7 @@ public class BehaviorPriority {
         
         // Calculate total priority weight
         double totalWeight = behaviors.stream()
-            .mapToDouble(b -> b.priority)
+            .mapToDouble(b -> b.getPriority())
             .sum();
         
         // Blend force vectors if available
@@ -311,11 +320,11 @@ public class BehaviorPriority {
         int targetBehaviors = 0;
         
         for (BehaviorRequest behavior : behaviors) {
-            double weight = behavior.priority / totalWeight;
+            double weight = behavior.getPriority() / totalWeight;
             
             // Blend force-based commands
-            if (behavior.command.parameters.containsKey("combinedForce")) {
-                Vector2D force = (Vector2D) behavior.command.parameters.get("combinedForce");
+            if (behavior.getCommand().parameters.containsKey("combinedForce")) {
+                Vector2D force = (Vector2D) behavior.getCommand().parameters.get("combinedForce");
                 blendedForce = new Vector2D(
                     blendedForce.x + force.x * weight,
                     blendedForce.y + force.y * weight
@@ -324,8 +333,8 @@ public class BehaviorPriority {
             }
             
             // Blend target-based commands
-            if (behavior.command.parameters.containsKey("target")) {
-                Point2D target = (Point2D) behavior.command.parameters.get("target");
+            if (behavior.getCommand().parameters.containsKey("target")) {
+                Point2D target = (Point2D) behavior.getCommand().parameters.get("target");
                 if (blendedTarget == null) {
                     blendedTarget = new Point2D(
                         target.x * weight,
@@ -341,12 +350,14 @@ public class BehaviorPriority {
             }
             
             // Average speed (safely handle missing or non-Double values)
-            Object speedObj = behavior.command.parameters.get("speed");
+            Object speedObj = behavior.getCommand().parameters.get("speed");
             if (speedObj instanceof Double) {
                 blendedSpeed += (Double) speedObj * weight;
             } else if (speedObj instanceof Integer) {
                 blendedSpeed += ((Integer) speedObj).doubleValue() * weight;
-            }
+                        } else if (speedObj != null) {
+                                System.err.println("Warning: Unexpected type for 'speed' parameter: " + speedObj.getClass().getName() + " in BehaviorRequest for agent " + agentId);
+                        }
         }
         
         // Set blended parameters
@@ -360,8 +371,8 @@ public class BehaviorPriority {
             blended.parameters.put("speed", blendedSpeed);
         }
         
-        // Set highest priority behavior type
-        blended.type = getMovementTypeForBehavior(behaviors.get(0).behaviorType);
+    // Set highest priority behavior type
+    blended.type = getMovementTypeForBehavior(behaviors.get(0).getBehaviorType());
         
         return blended;
     }
@@ -394,7 +405,7 @@ public class BehaviorPriority {
         if (behaviors == null) return false;
         
         return behaviors.stream()
-            .anyMatch(b -> b.priority >= 100);
+            .anyMatch(b -> b.getPriority() >= 100);
     }
     
     /**
@@ -407,8 +418,8 @@ public class BehaviorPriority {
         }
         
         return behaviors.stream()
-            .max(Comparator.comparingInt(b -> b.priority))
-            .map(b -> b.behaviorType)
+            .max(Comparator.comparingInt(b -> b.getPriority()))
+            .map(b -> b.getBehaviorType())
             .orElse(BehaviorType.IDLE);
     }
     
@@ -428,26 +439,25 @@ public class BehaviorPriority {
         if (behaviors == null) return new ArrayList<>();
         
         return behaviors.stream()
-            .map(b -> b.behaviorType)
+            .map(b -> b.getBehaviorType())
             .collect(java.util.stream.Collectors.toList());
     }
     
     // ==================== HISTORY & LOGGING ====================
-    
+
     /**
-     * LOG RESOLUTION
-     * Record conflict resolution for analysis
+     * Log a conflict resolution event for an agent. Keeps a bounded history per agent.
      */
-    private void logResolution(int agentId, ResolutionType type, 
-                              BehaviorType winner, List<BehaviorType> others) {
+    private void logResolution(int agentId, ResolutionType type, BehaviorType winner, List<BehaviorType> others) {
         ConflictResolution resolution = new ConflictResolution(
             agentId, type, winner, others, System.currentTimeMillis());
-        
-        resolutionHistory.computeIfAbsent(agentId, k -> new ArrayList<>()).add(resolution);
-        
+
+        // Use a thread-safe list for resolution history to allow concurrent logging.
+        resolutionHistory.computeIfAbsent(agentId, k -> new java.util.concurrent.CopyOnWriteArrayList<>()).add(resolution);
+
         // Keep only last 50 resolutions per agent
         List<ConflictResolution> history = resolutionHistory.get(agentId);
-        if (history.size() > 50) {
+        if (history != null && history.size() > 50) {
             history.remove(0);
         }
     }
@@ -464,7 +474,7 @@ public class BehaviorPriority {
      */
     private List<BehaviorType> getBehaviorTypes(List<BehaviorRequest> behaviors) {
         return behaviors.stream()
-            .map(b -> b.behaviorType)
+            .map(b -> b.getBehaviorType())
             .collect(java.util.stream.Collectors.toList());
     }
     

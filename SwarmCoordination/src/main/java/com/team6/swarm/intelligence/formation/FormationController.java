@@ -500,6 +500,49 @@ public class FormationController {
     public double getAveragePositionError() {
         return averagePositionError;
     }
+
+    /**
+     * Compute a cohesion metric for a specific formation based on current agent states.
+     * Returns a value in range [0.0, 1.0] where 1.0 means perfect cohesion (agents at
+     * their target positions) and 0.0 means very poor cohesion.
+     *
+     * This method is tolerant of missing agent states; agents not found in the provided
+     * list are ignored for the purpose of the calculation.
+     */
+    public double getFormationCohesion(Formation formation, List<AgentState> agents) {
+        if (formation == null || agents == null || agents.isEmpty()) return 0.0;
+
+        double totalDistance = 0.0;
+        int counted = 0;
+
+        // Build a quick lookup map of agentId -> AgentState for efficiency
+        Map<Integer, AgentState> stateById = new HashMap<>();
+        for (AgentState s : agents) {
+            stateById.put(s.agentId, s);
+        }
+
+        for (Integer agentId : formation.participatingAgents) {
+            AgentState s = stateById.get(agentId);
+            if (s == null) continue;
+
+            Point2D target = formation.getAgentPosition(agentId);
+            if (target == null) continue;
+
+            double dist = s.position.distanceTo(target);
+            totalDistance += dist;
+            counted++;
+        }
+
+        if (counted == 0) return 0.0;
+
+        double avgDistance = totalDistance / counted;
+
+        // Normalize cohesion: closer distances -> higher cohesion. We use formation.spacing
+        // as the reference scale. The formula maps 0 -> 1.0 and (2*spacing or more) -> 0.0
+        double scale = Math.max(1.0, formation.spacing * 2.0);
+        double cohesion = 1.0 - Math.min(1.0, avgDistance / scale);
+        return Math.max(0.0, Math.min(1.0, cohesion));
+    }
     
     /**
      * Check if formation is well-maintained
