@@ -582,8 +582,8 @@ public class ComprehensiveIntegrationTest {
         printTestHeader("Week 8: Intrusion Detector");
 
         assertTest("IntrusionDetector initialization", () -> {
-            IntrusionDetector detector = new IntrusionDetector();
-            return detector != null;
+            new IntrusionDetector();
+            return true; // Passes if no exception is thrown
         });
 
         assertTest("IntrusionDetector threat detection", () -> {
