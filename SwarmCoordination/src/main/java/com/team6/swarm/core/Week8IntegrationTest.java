@@ -240,7 +240,11 @@ public class Week8IntegrationTest {
         System.out.println("  ✓ Statistics: " + stats);
 
         // Test recent values
-        List<Double> recent = collector.getRecentValues("test.metric", 10);
+        List<MetricsCollector.DataPoint> recentDataPoints = collector.getRecentDataPoints("test.metric", 10);
+        List<Double> recent = new ArrayList<>();
+        for (MetricsCollector.DataPoint dp : recentDataPoints) {
+            recent.add(dp.getValue());
+        }
         assert recent.size() == 10 : "Recent values count incorrect";
         System.out.println("  ✓ Recent values retrieved: " + recent.size());
 
