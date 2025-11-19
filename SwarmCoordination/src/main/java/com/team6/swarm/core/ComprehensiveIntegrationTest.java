@@ -326,7 +326,7 @@ public class ComprehensiveIntegrationTest {
 
         assertTest("PerformanceOptimizer bottleneck detection", () -> {
             PerformanceOptimizer optimizer = new PerformanceOptimizer();
-            List<PerformanceOptimizer.Bottleneck> bottlenecks = optimizer.detectBottlenecks();
+            List<PerformanceOptimizer.Bottleneck> bottlenecks = optimizer.analyzeBottlenecks();
             return bottlenecks != null;
         });
 
