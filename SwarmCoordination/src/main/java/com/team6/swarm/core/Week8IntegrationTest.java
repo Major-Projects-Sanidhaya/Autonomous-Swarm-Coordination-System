@@ -194,7 +194,7 @@ public class Week8IntegrationTest {
         System.out.println("  ✓ Snapshot created: " + snapshotId);
 
         // Test state restoration
-        AgentState restored = recoveryManager.restoreLatest("agent1");
+        AgentState restored = recoveryManager.restoreLatestSnapshot("agent1");
         assert restored != null : "State restoration failed";
         assert restored.getPosition().equals(position) : "Restored state doesn't match";
         System.out.println("  ✓ State restoration successful");
