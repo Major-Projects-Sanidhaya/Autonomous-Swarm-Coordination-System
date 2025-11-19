@@ -156,7 +156,7 @@ public class Week8IntegrationTest {
         System.out.println("  ✓ Heartbeat recording successful");
 
         // Test failure reporting
-        faultTolerance.reportFailure("agent2", "Test failure");
+        faultTolerance.markAgentFailed("agent2", "Test failure");
         status = faultTolerance.getAgentStatus("agent2");
         assert status == FaultTolerance.AgentStatus.FAILED : "Agent should be failed";
         System.out.println("  ✓ Failure reporting successful");
