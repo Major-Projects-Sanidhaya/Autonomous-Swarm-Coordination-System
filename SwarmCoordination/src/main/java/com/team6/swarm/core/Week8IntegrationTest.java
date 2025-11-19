@@ -258,7 +258,9 @@ public class Week8IntegrationTest {
         batchMetrics.put("cpu.usage", 50.0);
         batchMetrics.put("memory.usage", 70.0);
         batchMetrics.put("thread.count", 10.0);
-        collector.recordMetrics(batchMetrics);
+        for (Map.Entry<String, Double> entry : batchMetrics.entrySet()) {
+            collector.recordMetric(entry.getKey(), entry.getValue());
+        }
         System.out.println("  ✓ Batch metrics recorded");
 
         // Test metrics
