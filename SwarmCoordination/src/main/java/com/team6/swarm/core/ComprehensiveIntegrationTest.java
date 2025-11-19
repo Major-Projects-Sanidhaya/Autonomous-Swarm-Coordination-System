@@ -313,8 +313,8 @@ public class ComprehensiveIntegrationTest {
         printTestHeader("Week 7: Performance Optimizer");
 
         assertTest("PerformanceOptimizer initialization", () -> {
-            PerformanceOptimizer optimizer = new PerformanceOptimizer();
-            return optimizer != null;
+            new PerformanceOptimizer();
+            return true;
         });
 
         assertTest("PerformanceOptimizer captures performance snapshot", () -> {
