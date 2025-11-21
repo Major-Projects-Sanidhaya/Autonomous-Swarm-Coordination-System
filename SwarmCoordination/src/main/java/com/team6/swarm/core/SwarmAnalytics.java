@@ -130,12 +130,19 @@ public class SwarmAnalytics {
             // Calculate statistics for recent behavior
             List<Double> cohesionValues = new ArrayList<>();
             List<Double> alignmentValues = new ArrayList<>();
+<<<<<<< HEAD
             List<Double> spreadValues = new ArrayList<>();
+=======
+
+>>>>>>> 1fa93694c41cba9e58ab04b43a274cd7d08ef79e
 
             for (SwarmBehaviorSnapshot snapshot : behaviorHistory) {
                 cohesionValues.add(snapshot.cohesionScore);
                 alignmentValues.add(snapshot.alignmentScore);
+<<<<<<< HEAD
                 spreadValues.add(snapshot.swarmSpread);
+=======
+>>>>>>> 1fa93694c41cba9e58ab04b43a274cd7d08ef79e
             }
 
             // Check for anomalies
