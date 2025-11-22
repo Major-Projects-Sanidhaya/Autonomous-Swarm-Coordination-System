@@ -391,6 +391,13 @@ public class FlockingController {
         }
     }
     
+    /**
+     * Set flocking parameters (alias for updateParameters for UI integration)
+     */
+    public void setParameters(FlockingParameters parameters) {
+        this.parameters = parameters;
+    }
+    
     public FlockingParameters getParameters() {
         return this.parameters;
     }

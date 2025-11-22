@@ -564,4 +564,47 @@ public class TaskAllocator {
         totalReassignments = 0;
         failedAssignments = 0;
     }
+    
+    // ==================== UI INTEGRATION METHODS ====================
+    
+    /**
+     * Update task allocator with delta time (for UI integration)
+     */
+    public void update(List<AgentState> agents, double deltaTime) {
+        // Process pending tasks
+        while (!pendingTasks.isEmpty()) {
+            Task task = pendingTasks.poll();
+            assignTask(task, agents);
+        }
+    }
+    
+    /**
+     * Get all tasks (pending and assigned)
+     */
+    public List<Task> getAllTasks() {
+        List<Task> allTasks = new ArrayList<>();
+        // Add pending tasks
+        allTasks.addAll(pendingTasks);
+        // Add assigned tasks
+        for (TaskAssignment assignment : assignments.values()) {
+            allTasks.add(assignment.task);
+        }
+        return allTasks;
+    }
+    
+    /**
+     * Add task to queue
+     */
+    public void addTask(Task task) {
+        pendingTasks.add(task);
+    }
+    
+    /**
+     * Clear all tasks
+     */
+    public void clearAllTasks() {
+        pendingTasks.clear();
+        assignments.clear();
+        agentWorkload.clear();
+    }
 }

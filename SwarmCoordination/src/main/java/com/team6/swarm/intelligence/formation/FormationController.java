@@ -101,6 +101,9 @@ public class FormationController {
     // Active formations
     private final Map<String, Formation> activeFormations;
     
+    // Current formation being maintained
+    private Formation currentFormation;
+    
     // Configuration
     private static final double ACCEPTABLE_ERROR = 5.0;      // Units
     private static final double MINOR_ERROR = 15.0;          // Units
@@ -570,5 +573,38 @@ public class FormationController {
         formationsCreated = 0;
         transitionsCompleted = 0;
         averagePositionError = 0.0;
+    }
+    
+    // ==================== UI INTEGRATION METHODS ====================
+    
+    /**
+     * Set formation for UI integration
+     */
+    public void setFormation(Formation formation, List<AgentState> agents) {
+        if (formation == null) return;
+        this.currentFormation = formation;
+        activeFormations.put(formation.formationId, formation);
+    }
+    
+    /**
+     * Break current formation
+     */
+    public void breakFormation() {
+        if (currentFormation != null) {
+            activeFormations.remove(currentFormation.formationId);
+            currentFormation = null;
+        }
+    }
+    
+    /**
+     * Update formations with delta time (for UI integration)
+     */
+    public void update(List<AgentState> agents, double deltaTime) {
+        if (currentFormation != null) {
+            maintainFormation(currentFormation, agents);
+        }
+        if (isTransitioning()) {
+            updateTransition(agents);
+        }
     }
 }

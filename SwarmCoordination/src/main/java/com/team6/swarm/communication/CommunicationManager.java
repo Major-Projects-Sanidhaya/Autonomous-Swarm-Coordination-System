@@ -5,6 +5,9 @@ package com.team6.swarm.communication;
 
 import com.team6.swarm.core.AgentState;
 import com.team6.swarm.core.Point2D;
+import com.team6.swarm.core.EventBus;
+import com.team6.swarm.ui.NetworkConfiguration;
+import com.team6.swarm.ui.NetworkStatus;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -17,6 +20,7 @@ public class CommunicationManager {
     private final Map<Integer, Point2D> agentPositions;
     private final Map<Integer, MessageListener> messageListeners;
     private final int maxHistorySize;
+    private EventBus eventBus;
     
     public CommunicationManager() {
         this(new NetworkSimulator());
@@ -31,6 +35,15 @@ public class CommunicationManager {
         this.agentPositions = new ConcurrentHashMap<>();
         this.messageListeners = new ConcurrentHashMap<>();
         this.maxHistorySize = 1000;
+        this.eventBus = null;
+    }
+    
+    /**
+     * Constructor with EventBus for integration with UI
+     */
+    public CommunicationManager(EventBus eventBus) {
+        this(new NetworkSimulator());
+        this.eventBus = eventBus;
     }
     
     public void updateTopology(List<AgentState> allAgents) {
@@ -400,6 +413,54 @@ public class CommunicationManager {
         }
         
         return partitions;
+    }
+    
+    /**
+     * Update configuration from NetworkConfiguration
+     */
+    public void updateConfiguration(NetworkConfiguration config) {
+        if (config == null) return;
+        
+        // Configuration update logic can be added here
+        // For now, this is a placeholder for future implementation
+    }
+    
+    /**
+     * Get current network status for visualization
+     */
+    public NetworkStatus getNetworkStatus() {
+        NetworkStatus status = new NetworkStatus();
+        
+        // Calculate connections
+        for (Map.Entry<Integer, NeighborInformation> entry : networkTopology.entrySet()) {
+            int agentId = entry.getKey();
+            NeighborInformation neighbors = entry.getValue();
+            
+            for (NeighborAgent neighbor : neighbors.neighbors) {
+                if (neighbor.canCommunicate) {
+                    long now = System.currentTimeMillis();
+                    ConnectionInfo conn = new ConnectionInfo(
+                        agentId, 
+                        neighbor.neighborId, 
+                        neighbor.signalStrength, 
+                        true,
+                        now,
+                        now,
+                        0,
+                        0.0
+                    );
+                    status.addConnection(conn);
+                }
+            }
+        }
+        
+        // Set total agents
+        status.totalAgents = networkTopology.size();
+        
+        // Update metrics
+        status.updateMetrics();
+        
+        return status;
     }
     
     @Override
