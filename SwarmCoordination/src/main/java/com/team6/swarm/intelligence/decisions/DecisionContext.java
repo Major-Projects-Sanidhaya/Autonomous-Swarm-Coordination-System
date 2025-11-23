@@ -6,12 +6,36 @@ import java.util.List;
  * DECISIONCONTEXT CLASS - Multi-Criteria Decision Setup
  */
 public class DecisionContext {
-    public String decisionId;
-    public String description;
-    public List<String> options;
-    public List<DecisionCriterion> criteria;
-    public long createdTime;
-    public DecisionStatus status;
+    private String decisionId;
+    private String description;
+    private List<String> options;
+    private List<DecisionCriterion> criteria;
+    private long createdTime;
+    private DecisionStatus status;
+
+    public String getDecisionId() {
+      return decisionId;
+    }
+
+    public String getDescription() {
+      return description;
+    }
+
+    public List<String> getOptions() {
+      return new ArrayList<>(options);
+    }
+
+    public List<DecisionCriterion> getCriteria() {
+      return new ArrayList<>(criteria);
+    }
+
+    public long getCreatedTime() {
+      return createdTime;
+    }
+
+    public DecisionStatus getStatus() {
+      return status;
+    }
     
     public DecisionContext(String decisionId, String description, List<String> options) {
         this.decisionId = decisionId;

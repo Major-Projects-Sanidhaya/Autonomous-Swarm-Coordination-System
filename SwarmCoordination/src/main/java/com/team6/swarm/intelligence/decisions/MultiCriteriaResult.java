@@ -5,12 +5,43 @@ import java.util.*;
  * MULTICRITERIARESULT CLASS - Multi-Criteria Analysis Outcome
  */
 public class MultiCriteriaResult {
-    public String decisionId;
-    public String bestOption;
-    public double bestScore;
-    public Map<String, Double> optionScores;          // option -> total score
-    public Map<String, Map<String, Double>> detailedScores;  // option -> criterion -> score
-    public long timestamp;
+    private final String decisionId;
+    private final String bestOption;
+    private final double bestScore;
+    private final Map<String, Double> optionScores;          // option -> total score
+    private final Map<String, Map<String, Double>> detailedScores;  // option -> criterion -> score
+    private final long timestamp;
+
+    public String getDecisionId() {
+      return decisionId;
+    }
+
+    public String getBestOption() {
+      return bestOption;
+    }
+
+    public double getBestScore() {
+      return bestScore;
+    }
+
+    public Map<String, Double> getOptionScores() {
+      return Collections.unmodifiableMap(optionScores);
+    }
+
+    /**
+     * Returns an unmodifiable deep copy of the detailed scores map.
+     */
+    public Map<String, Map<String, Double>> getAllDetailedScores() {
+      Map<String, Map<String, Double>> copy = new HashMap<>();
+      for (Map.Entry<String, Map<String, Double>> entry : detailedScores.entrySet()) {
+        copy.put(entry.getKey(), Collections.unmodifiableMap(new HashMap<>(entry.getValue())));
+      }
+      return Collections.unmodifiableMap(copy);
+    }
+
+    public long getTimestamp() {
+      return timestamp;
+    }
     
     public MultiCriteriaResult(String decisionId, String bestOption, double bestScore,
                               Map<String, Double> optionScores,

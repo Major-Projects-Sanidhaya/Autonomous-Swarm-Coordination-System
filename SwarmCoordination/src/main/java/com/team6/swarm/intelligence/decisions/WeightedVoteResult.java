@@ -6,13 +6,21 @@ import java.util.Map;
  * WEIGHTEDVOTERESULT CLASS - Outcome of Weighted Voting
  */
 public class WeightedVoteResult {
-    public String proposalId;
-    public boolean consensusReached;
-    public String winningOption;
-    public double consensusLevel;
-    public Map<String, Double> weightedVotes;  // option -> total weight
-    public Map<Integer, Double> agentWeights;  // agentId -> weight
-    public long timestamp;
+    private String proposalId;
+    private boolean consensusReached;
+    private String winningOption;
+    private double consensusLevel;
+    private Map<String, Double> weightedVotes;  // option -> total weight
+    private Map<Integer, Double> agentWeights;  // agentId -> weight
+    private long timestamp;
+
+    public String getProposalId() { return proposalId; }
+    public boolean isConsensusReached() { return consensusReached; }
+    public String getWinningOption() { return winningOption; }
+    public double getConsensusLevel() { return consensusLevel; }
+    public Map<String, Double> getWeightedVotes() { return new HashMap<>(weightedVotes); }
+    public Map<Integer, Double> getAgentWeights() { return new HashMap<>(agentWeights); }
+    public long getTimestamp() { return timestamp; }
     
     public WeightedVoteResult(String proposalId, boolean consensusReached,
                               String winningOption, double consensusLevel,

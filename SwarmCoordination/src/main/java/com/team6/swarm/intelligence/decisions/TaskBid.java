@@ -4,11 +4,17 @@ package com.team6.swarm.intelligence.decisions;
  * TASKBID CLASS - Agent Bid for Task
  */
 public class TaskBid {
-    public int agentId;
-    public String taskId;
-    public double cost;           // Agent's cost to complete task
-    public double quality;        // Expected quality of completion (0-100)
-    public long bidTime;
+    private final int agentId;
+    private final String taskId;
+    private final double cost;           // Agent's cost to complete task
+    private final double quality;        // Expected quality of completion (0-100)
+    private final long bidTime;
+
+    public int getAgentId() { return agentId; }
+    public String getTaskId() { return taskId; }
+    public double getCost() { return cost; }
+    public double getQuality() { return quality; }
+    public long getBidTime() { return bidTime; }
     
     public TaskBid(int agentId, String taskId, double cost, double quality) {
         this.agentId = agentId;

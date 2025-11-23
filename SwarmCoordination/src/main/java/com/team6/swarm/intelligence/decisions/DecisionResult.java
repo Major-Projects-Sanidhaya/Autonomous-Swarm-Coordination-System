@@ -3,7 +3,7 @@ package com.team6.swarm.intelligence.decisions;
 /**
  * DECISIONRESULT CLASS - Generic Decision Outcome
  */
-abstract class DecisionResult {
+public class DecisionResult {
     public String decisionId;
     public String selectedOption;
     public long timestamp;

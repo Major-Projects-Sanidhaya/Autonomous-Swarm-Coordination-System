@@ -148,8 +148,8 @@ public class DecisionTest {
             String.format("%.2f", result.getWeightForOption("LEFT")));
         System.out.println("  Total weighted votes for RIGHT: " + 
             String.format("%.2f", result.getWeightForOption("RIGHT")));
-        System.out.println("  Winner: " + result.winningOption);
-        System.out.println("  Consensus level: " + String.format("%.1f%%", result.consensusLevel * 100));
+        System.out.println("  Winner: " + result.getWinningOption());
+        System.out.println("  Consensus level: " + String.format("%.1f%%", result.getConsensusLevel() * 100));
         
         // VALIDATION: Verify weights were actually calculated
         double leftWeight = result.getWeightForOption("LEFT");
@@ -163,7 +163,7 @@ public class DecisionTest {
         // RIGHT total ≈ 1.26 (3 * 0.42)
         
         System.out.println();
-        if (leftWeight > rightWeight && result.winningOption.equals("LEFT")) {
+        if (leftWeight > rightWeight && result.getWinningOption().equals("LEFT")) {
             System.out.println("  ✓ PASS: Weighted voting correctly favored expert opinions");
             System.out.println("         LEFT weight (" + String.format("%.2f", leftWeight) + 
                               ") > RIGHT weight (" + String.format("%.2f", rightWeight) + ")");
@@ -197,9 +197,9 @@ public class DecisionTest {
         decision.addCriterion("Risk", CriterionType.RISK, 0.1);  // 10% weight
         
         System.out.println("Criteria weights:");
-        for (DecisionCriterion criterion : decision.criteria) {
+        for (DecisionCriterion criterion : decision.getCriteria()) {
             System.out.println(String.format("  %s: %.0f%%", 
-                criterion.name, criterion.weight * 100));
+                criterion.getName(), criterion.getWeight() * 100));
         }
         System.out.println();
         
@@ -211,7 +211,7 @@ public class DecisionTest {
         
         System.out.println();
         System.out.println("Option scores:");
-        for (Map.Entry<String, Double> entry : result.optionScores.entrySet()) {
+        for (Map.Entry<String, Double> entry : result.getOptionScores().entrySet()) {
             System.out.println(String.format("  %s: %.2f points", 
                 entry.getKey(), entry.getValue()));
             
@@ -224,15 +224,15 @@ public class DecisionTest {
         }
         
         System.out.println();
-        System.out.println("Selected option: " + result.bestOption);
-        System.out.println("Score: " + String.format("%.2f", result.bestScore));
+        System.out.println("Selected option: " + result.getBestOption());
+        System.out.println("Score: " + String.format("%.2f", result.getBestScore()));
         System.out.println("Margin over second: " + String.format("%.2f", result.getScoreMargin()));
         
         // VALIDATION: Verify best option has highest score
         double maxScore = Double.NEGATIVE_INFINITY;
         String expectedWinner = null;
         
-        for (Map.Entry<String, Double> entry : result.optionScores.entrySet()) {
+        for (Map.Entry<String, Double> entry : result.getOptionScores().entrySet()) {
             if (entry.getValue() > maxScore) {
                 maxScore = entry.getValue();
                 expectedWinner = entry.getKey();
@@ -240,8 +240,8 @@ public class DecisionTest {
         }
         
         System.out.println();
-        if (result.bestOption.equals(expectedWinner) && 
-            Math.abs(result.bestScore - maxScore) < 0.01) {
+        if (result.getBestOption().equals(expectedWinner) && 
+            Math.abs(result.getBestScore() - maxScore) < 0.01) {
             System.out.println("  ✓ PASS: Highest scoring option selected");
             System.out.println("         " + expectedWinner + " with score " + 
                               String.format("%.2f", maxScore));
@@ -325,32 +325,32 @@ public class DecisionTest {
             
             // Show all bids
             System.out.println("All bids:");
-            List<TaskBid> sortedBids = new ArrayList<>(result.allBids);
-            sortedBids.sort(Comparator.comparingDouble(b -> b.cost));
+            List<TaskBid> sortedBids = new ArrayList<>(result.getAllBids());
+            sortedBids.sort(Comparator.comparingDouble(b -> b.getCost()));
             
             for (TaskBid bid : sortedBids) {
                 System.out.println(String.format("  Agent %d: cost=%.2f, quality=%.2f, value=%.2f",
-                    bid.agentId, bid.cost, bid.quality, bid.getValue()));
+                    bid.getAgentId(), bid.getCost(), bid.getQuality(), bid.getValue()));
             }
             
             System.out.println();
-            System.out.println("Winner: Agent " + result.winningBid.agentId);
-            System.out.println("Winning cost: " + String.format("%.2f", result.winningBid.cost));
+            System.out.println("Winner: Agent " + result.getWinningBid().getAgentId());
+            System.out.println("Winning cost: " + String.format("%.2f", result.getWinningBid().getCost()));
             System.out.println("Cost savings: " + String.format("%.2f", result.getCostSavings()));
             
             // VALIDATION: Verify winner has lowest cost
-            TaskBid lowestBid = result.allBids.stream()
-                .min(Comparator.comparingDouble(b -> b.cost))
+            TaskBid lowestBid = result.getAllBids().stream()
+                .min(Comparator.comparingDouble(b -> b.getCost()))
                 .orElse(null);
             
             System.out.println();
-            if (lowestBid != null && result.winningBid.agentId == lowestBid.agentId) {
+            if (lowestBid != null && result.getWinningBid().getAgentId() == lowestBid.getAgentId()) {
                 System.out.println("  ✓ PASS: Lowest cost bid won the auction");
-                System.out.println("         Agent " + lowestBid.agentId + 
-                                  " with cost " + String.format("%.2f", lowestBid.cost));
+                System.out.println("         Agent " + lowestBid.getAgentId() + 
+                                  " with cost " + String.format("%.2f", lowestBid.getCost()));
                 
                 // Verify cost calculation makes sense
-                AgentState winner = findAgent(result.winningBid.agentId, agents);
+                AgentState winner = findAgent(result.getWinningBid().getAgentId(), agents);
                 if (winner != null) {
                     double distance = winner.position.distanceTo(task.targetLocation);
                     System.out.println("         Distance: " + String.format("%.0f", distance) +
@@ -502,11 +502,11 @@ public class DecisionTest {
             boolean hasCompromise = resolution.chosenOption != null;
             
             // Check if compromise leans toward majority
-            boolean leanCorrect = resolution.chosenOption.contains("LEFT") || 
-                                  resolution.chosenOption.equals("CENTER");
             
             System.out.println();
             if (usedCompromise && hasCompromise) {
+                boolean leanCorrect = resolution.chosenOption.contains("LEFT") || 
+                                      resolution.chosenOption.equals("CENTER");
                 System.out.println("  ✓ PASS: Compromise strategy applied");
                 System.out.println("         Result: " + resolution.chosenOption);
                 if (leanCorrect) {

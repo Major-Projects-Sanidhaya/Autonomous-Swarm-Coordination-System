@@ -311,13 +311,21 @@ public class ConflictResolver {
                                     VoteProposal proposal) {
         // For navigation: blend directions
         if (proposal.proposalType == ProposalType.NAVIGATION) {
+            // Avoid division by zero
+            int total = votes1 + votes2;
+            if (total == 0) {
+                return proposal.options.isEmpty() ? null : proposal.options.get(0);
+            }
+
             // Calculate weighted direction
-            double weight1 = (double) votes1 / (votes1 + votes2);
-            double weight2 = (double) votes2 / (votes1 + votes2);
-            
-            if (weight1 > 0.6) {
+            double weight1 = (double) votes1 / total;
+            double weight2 = (double) votes2 / total;
+
+            final double THRESHOLD = 0.6;
+
+            if (weight1 > THRESHOLD) {
                 return option1 + "_SLIGHT";  // Mostly option1
-            } else if (weight2 > 0.6) {
+            } else if (weight2 > THRESHOLD) {
                 return option2 + "_SLIGHT";  // Mostly option2
             } else {
                 return "CENTER";  // Middle ground
@@ -349,8 +357,8 @@ public class ConflictResolver {
         if (attempts >= MAX_REVOTE_ATTEMPTS) {
             System.out.println("  Maximum revote attempts reached");
             return new ResolutionResult(proposal.proposalId, false, null,
-                                       ResolutionStrategy.REVOTE,
-                                       "Max revote attempts exceeded");
+                                        ResolutionStrategy.REVOTE,
+                                        "Max revote attempts exceeded");
         }
         
         // Increment attempt counter
@@ -564,51 +572,6 @@ public class ConflictResolver {
             "ConflictResolver[Total: %d | Leader: %d | Compromise: %d | Revote: %d | Failed: %d]",
             totalConflicts, leaderResolutions, compromiseResolutions, 
             revoteResolutions, failedResolutions
-        );
-    }
-}
-
-// ==================== RESOLUTION STRATEGY ====================
-
-/**
- * RESOLUTIONSTRATEGY ENUM - Conflict Resolution Approaches
- */
-enum ResolutionStrategy {
-    FALLBACK_LEADER,    // Leader decides
-    COMPROMISE,         // Find middle ground
-    REVOTE,            // Vote again with modified options
-    MULTI_STAGE,       // Break into smaller decisions
-    HYBRID             // Combine strategies
-}
-
-// ==================== RESOLUTION RESULT ====================
-
-/**
- * RESOLUTIONRESULT CLASS - Outcome of Conflict Resolution
- */
-class ResolutionResult {
-    public String proposalId;
-    public boolean resolved;
-    public String chosenOption;
-    public ResolutionStrategy strategyUsed;
-    public String explanation;
-    public long timestamp;
-    
-    public ResolutionResult(String proposalId, boolean resolved, String chosenOption,
-                            ResolutionStrategy strategyUsed, String explanation) {
-        this.proposalId = proposalId;
-        this.resolved = resolved;
-        this.chosenOption = chosenOption;
-        this.strategyUsed = strategyUsed;
-        this.explanation = explanation;
-        this.timestamp = System.currentTimeMillis();
-    }
-    
-    @Override
-    public String toString() {
-        return String.format(
-            "ResolutionResult[%s: %s | Strategy: %s | Resolved: %s]",
-            proposalId, chosenOption, strategyUsed, resolved
         );
     }
 }

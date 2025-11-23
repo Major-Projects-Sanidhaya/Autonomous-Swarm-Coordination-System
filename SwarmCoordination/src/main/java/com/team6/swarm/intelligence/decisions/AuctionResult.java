@@ -6,10 +6,26 @@ import java.util.List;
  * AUCTIONRESULT CLASS - Auction-Based Allocation Outcome
  */
 public class AuctionResult {
-    public String taskId;
-    public TaskBid winningBid;
-    public List<TaskBid> allBids;
-    public long timestamp;
+    private final String taskId;
+    private final TaskBid winningBid;
+    private final List<TaskBid> allBids;
+    private final long timestamp;
+
+    public String getTaskId() {
+      return taskId;
+    }
+
+    public TaskBid getWinningBid() {
+      return winningBid;
+    }
+
+    public List<TaskBid> getAllBids() {
+      return java.util.Collections.unmodifiableList(allBids);
+    }
+
+    public long getTimestamp() {
+      return timestamp;
+    }
     
     public AuctionResult(String taskId, TaskBid winningBid, List<TaskBid> allBids) {
         this.taskId = taskId;
@@ -31,7 +47,7 @@ public class AuctionResult {
     public double getAverageBidCost() {
         if (allBids.isEmpty()) return 0;
         return allBids.stream()
-            .mapToDouble(b -> b.cost)
+            .mapToDouble(b -> b.getCost())
             .average()
             .orElse(0);
     }
@@ -41,14 +57,14 @@ public class AuctionResult {
      */
     public double getCostSavings() {
         double avgCost = getAverageBidCost();
-        return avgCost - winningBid.cost;
+        return avgCost - winningBid.getCost();
     }
     
     @Override
     public String toString() {
         return String.format(
             "AuctionResult[Task: %s | Winner: Agent %d | Cost: %.2f | Bids: %d]",
-            taskId, winningBid.agentId, winningBid.cost, allBids.size()
+            taskId, winningBid.getAgentId(), winningBid.getCost(), allBids.size()
         );
     }
 }
