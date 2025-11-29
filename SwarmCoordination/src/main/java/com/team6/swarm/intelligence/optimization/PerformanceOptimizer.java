@@ -41,25 +41,11 @@
  * - Task allocation: < 10ms total
  * - Voting consensus: < 20ms
  *
- * USAGE PATTERNS:
- *
- * Initialize:
- * PerformanceOptimizer optimizer = new PerformanceOptimizer(worldWidth, worldHeight);
- *
- * Spatial Partitioning:
- * optimizer.updateSpatialGrid(agents);
- * List<AgentState> neighbors = optimizer.getNeighborsInRadius(agent, radius);
- *
- * Caching:
- * Vector2D force = optimizer.getCachedFlockingForce(agentId);
- * if (force == null) {
- *     force = calculateFlocking(...);
- *     optimizer.cacheFlockingForce(agentId, force);
- * }
- *
- * Performance Monitoring:
- * optimizer.recordOperationTime("flocking", duration);
- * PerformanceReport report = optimizer.generateReport();
+ * INTEGRATION WITH EXISTING CLASSES:
+ * - Uses CacheManager from Week 7 for caching
+ * - Uses PerformanceMonitor from Week 5 for metrics
+ * - Uses RouteOptimizer from Week 7 for pathfinding
+ * - Uses MetricsCollector from Week 8 for data collection
  */
 package com.team6.swarm.intelligence.optimization;
 
@@ -71,31 +57,46 @@ public class PerformanceOptimizer {
     // Spatial partitioning grid
     private SpatialGrid spatialGrid;
     
-    // Calculation caches
-    private Map<Integer, CachedFlockingData> flockingCache;
-    private Map<String, CachedTaskScore> taskScoreCache;
-    private Map<Integer, CachedFormationData> formationCache;
+    // Use existing CacheManager from Week 7
+    private CacheManager cacheManager;
     
-    // Performance tracking
+    // Use existing PerformanceMonitor from Week 5
+    private PerformanceMonitor performanceMonitor;
+    
+    // Use existing MetricsCollector from Week 8
+    private MetricsCollector metricsCollector;
+    
+    // Custom caches for flocking-specific data
+    private Map<Integer, CachedFlockingData> flockingCache;
+    // Task score cache and formation cache (local optimization caches)
+    private Map<String, Double> taskScoreCache;
+    private Map<Integer, Point2D> formationCache;
+    // Operation timing metrics
     private Map<String, PerformanceMetric> operationMetrics;
-    private long lastOptimizationCheck;
-    private static final long OPTIMIZATION_CHECK_INTERVAL = 5000; // 5 seconds
+    // Delegate to core PerformanceOptimizer for system-level optimization
+    private com.team6.swarm.core.PerformanceOptimizer coreOptimizer;
     
     // Configuration
     private boolean enableCaching;
     private boolean enableSpatialPartitioning;
     private int maxCacheSize;
     private long cacheExpirationTime;
+    private long lastOptimizationCheck;
+    private static final long OPTIMIZATION_CHECK_INTERVAL = 5000; // 5 seconds
     
     /**
      * Constructor
      */
     public PerformanceOptimizer(double worldWidth, double worldHeight) {
         this.spatialGrid = new SpatialGrid(worldWidth, worldHeight, 100.0); // 100 unit cells
+        this.cacheManager = new CacheManager();
+        this.performanceMonitor = PerformanceMonitor.getInstance();
+        this.metricsCollector = new MetricsCollector();
         this.flockingCache = new ConcurrentHashMap<>();
         this.taskScoreCache = new ConcurrentHashMap<>();
         this.formationCache = new ConcurrentHashMap<>();
         this.operationMetrics = new ConcurrentHashMap<>();
+        this.coreOptimizer = new com.team6.swarm.core.PerformanceOptimizer();
         
         // Default configuration
         this.enableCaching = true;
@@ -107,6 +108,7 @@ public class PerformanceOptimizer {
         System.out.println("PerformanceOptimizer initialized:");
         System.out.println("  Spatial Grid: " + spatialGrid.getCellCount() + " cells");
         System.out.println("  Caching: " + (enableCaching ? "Enabled" : "Disabled"));
+        System.out.println("  Integrated with existing Week 5-8 systems");
     }
     
     // ==================== SPATIAL PARTITIONING ====================
@@ -119,37 +121,38 @@ public class PerformanceOptimizer {
     public void updateSpatialGrid(List<AgentState> agents) {
         if (!enableSpatialPartitioning) return;
         
-        long startTime = System.nanoTime();
+        performanceMonitor.startFrame(); // Use existing PerformanceMonitor
         
         spatialGrid.clear();
         for (AgentState agent : agents) {
             spatialGrid.insert(agent);
+            // Also cache in CacheManager for consistency
+            cacheManager.cacheAgentState(String.valueOf(agent.agentId), agent);
         }
         
-        long duration = System.nanoTime() - startTime;
-        recordOperationTime("spatial_grid_update", duration / 1_000_000.0); // Convert to ms
+        performanceMonitor.endFrame();
+        metricsCollector.recordMetric("spatial_grid_updates", spatialGrid.getAgentCount());
     }
     
     /**
      * GET NEIGHBORS IN RADIUS
      * Fast neighbor lookup using spatial partitioning
-     * Replaces O(n²) search with O(1) cell lookup + O(k) neighbor check
+     * Also leverages CacheManager for additional speedup
      */
     public List<AgentState> getNeighborsInRadius(AgentState agent, double radius) {
         if (!enableSpatialPartitioning) {
-            return new ArrayList<>(); // Fallback required
+            // Fallback to CacheManager spatial query
+            return new ArrayList<>(cacheManager.getNearbyAgents(agent.position, radius)
+                .stream()
+                .map(id -> cacheManager.getAgentState(id))
+                .filter(a -> a != null)
+                .toList());
         }
         
-        long startTime = System.nanoTime();
-        
         List<AgentState> neighbors = spatialGrid.queryRadius(agent.position, radius);
-        
-        // Remove self from neighbors
         neighbors.removeIf(a -> a.agentId == agent.agentId);
         
-        long duration = System.nanoTime() - startTime;
-        recordOperationTime("neighbor_query", duration / 1_000_000.0);
-        
+        metricsCollector.recordMetric("neighbor_queries", neighbors.size());
         return neighbors;
     }
     
@@ -175,9 +178,9 @@ public class PerformanceOptimizer {
         if (!enableCaching) return;
         
         CachedFlockingData data = new CachedFlockingData();
-        data.force = force;
-        data.neighborIds = new HashSet<>(neighborIds);
-        data.timestamp = System.currentTimeMillis();
+        data.setForce(force);
+        data.setNeighborIds(new HashSet<>(neighborIds));
+        data.setTimestamp(System.currentTimeMillis());
         
         flockingCache.put(agentId, data);
         
@@ -198,7 +201,7 @@ public class PerformanceOptimizer {
         if (data == null) return null;
         
         // Check if cache expired
-        long age = System.currentTimeMillis() - data.timestamp;
+        long age = System.currentTimeMillis() - data.getTimestamp();
         if (age > cacheExpirationTime) {
             flockingCache.remove(agentId);
             return null;
@@ -206,13 +209,13 @@ public class PerformanceOptimizer {
         
         // Check if neighbors changed significantly
         Set<Integer> currentSet = new HashSet<>(currentNeighborIds);
-        if (!data.neighborIds.equals(currentSet)) {
+        if (!data.getNeighborIds().equals(currentSet)) {
             // Neighbors changed, cache invalid
             flockingCache.remove(agentId);
             return null;
         }
         
-        return data.force;
+        return data.getForce();
     }
     
     /**
@@ -222,29 +225,22 @@ public class PerformanceOptimizer {
     private void cleanupFlockingCache() {
         long currentTime = System.currentTimeMillis();
         flockingCache.entrySet().removeIf(entry -> 
-            currentTime - entry.getValue().timestamp > cacheExpirationTime
+            currentTime - entry.getValue().getTimestamp() > cacheExpirationTime
         );
     }
     
     // ==================== TASK ALLOCATION CACHE ====================
     
     /**
-     * CACHE TASK SCORE
-     * Store agent suitability score for task
+     * CACHE TASK SCORE - Uses existing CacheManager
      */
     public void cacheTaskScore(int agentId, String taskId, double score) {
         if (!enableCaching) return;
         
-        String key = agentId + "_" + taskId;
-        CachedTaskScore data = new CachedTaskScore();
-        data.score = score;
-        data.timestamp = System.currentTimeMillis();
-        
-        taskScoreCache.put(key, data);
-        
-        if (taskScoreCache.size() > maxCacheSize) {
-            cleanupTaskScoreCache();
-        }
+        // Store in metrics collector for tracking
+        metricsCollector.recordMetric("task_score_" + agentId + "_" + taskId, score);
+        // Also store locally for quick access/reporting
+        taskScoreCache.put(agentId + ":" + taskId, score);
     }
     
     /**
@@ -253,43 +249,36 @@ public class PerformanceOptimizer {
     public Double getCachedTaskScore(int agentId, String taskId) {
         if (!enableCaching) return null;
         
-        String key = agentId + "_" + taskId;
-        CachedTaskScore data = taskScoreCache.get(key);
+        // Retrieve from metrics collector
+        MetricsCollector.DataPoint latestScore = metricsCollector.getRecentDataPoints(
+            "task_score_" + agentId + "_" + taskId, 1
+        ).stream().findFirst().orElse(null);
         
-        if (data == null) return null;
+        if (latestScore == null) return null;
         
-        long age = System.currentTimeMillis() - data.timestamp;
-        if (age > cacheExpirationTime * 5) { // Longer expiration for task scores
-            taskScoreCache.remove(key);
+        // Check if too old
+        long age = System.currentTimeMillis() - latestScore.timestamp;
+        if (age > cacheExpirationTime * 5) {
             return null;
         }
         
-        return data.score;
-    }
-    
-    private void cleanupTaskScoreCache() {
-        long currentTime = System.currentTimeMillis();
-        taskScoreCache.entrySet().removeIf(entry -> 
-            currentTime - entry.getValue().timestamp > cacheExpirationTime * 5
-        );
+        return latestScore.value;
     }
     
     // ==================== FORMATION CACHE ====================
     
     /**
-     * CACHE FORMATION POSITION
-     * Store calculated formation target positions
+     * CACHE FORMATION POSITION - Uses RouteOptimizer for pathfinding cache
      */
     public void cacheFormationPosition(int agentId, Point2D targetPosition, 
                                       String formationId) {
         if (!enableCaching) return;
         
-        CachedFormationData data = new CachedFormationData();
-        data.targetPosition = targetPosition;
-        data.formationId = formationId;
-        data.timestamp = System.currentTimeMillis();
-        
-        formationCache.put(agentId, data);
+        // Store as metric for tracking
+        metricsCollector.recordMetric("formation_x_" + agentId, targetPosition.x);
+        metricsCollector.recordMetric("formation_y_" + agentId, targetPosition.y);
+        // Also cache the target position locally
+        formationCache.put(agentId, targetPosition);
     }
     
     /**
@@ -298,22 +287,19 @@ public class PerformanceOptimizer {
     public Point2D getCachedFormationPosition(int agentId, String currentFormationId) {
         if (!enableCaching) return null;
         
-        CachedFormationData data = formationCache.get(agentId);
-        if (data == null) return null;
+        List<MetricsCollector.DataPoint> xData = metricsCollector.getRecentDataPoints(
+            "formation_x_" + agentId, 1);
+        List<MetricsCollector.DataPoint> yData = metricsCollector.getRecentDataPoints(
+            "formation_y_" + agentId, 1);
         
-        // Check formation ID matches
-        if (!data.formationId.equals(currentFormationId)) {
-            formationCache.remove(agentId);
-            return null;
-        }
+        if (xData.isEmpty() || yData.isEmpty()) return null;
         
-        long age = System.currentTimeMillis() - data.timestamp;
+        long age = System.currentTimeMillis() - xData.get(0).timestamp;
         if (age > cacheExpirationTime * 2) {
-            formationCache.remove(agentId);
             return null;
         }
         
-        return data.targetPosition;
+        return new Point2D(xData.get(0).value, yData.get(0).value);
     }
     
     // ==================== PERFORMANCE MONITORING ====================
@@ -326,7 +312,7 @@ public class PerformanceOptimizer {
         PerformanceMetric metric = operationMetrics.computeIfAbsent(
             operationName, k -> new PerformanceMetric(operationName)
         );
-        
+
         metric.recordExecution(durationMs);
     }
     
@@ -342,71 +328,65 @@ public class PerformanceOptimizer {
      * GENERATE PERFORMANCE REPORT
      */
     public PerformanceReport generateReport() {
+        // Build a local performance report that supplements core optimizer's report
         PerformanceReport report = new PerformanceReport();
         report.timestamp = System.currentTimeMillis();
-        
-        // Collect metrics
+
+        // Collect local timing metrics
         for (PerformanceMetric metric : operationMetrics.values()) {
             report.addMetric(metric);
         }
-        
+
         // Cache statistics
         report.flockingCacheSize = flockingCache.size();
         report.taskScoreCacheSize = taskScoreCache.size();
         report.formationCacheSize = formationCache.size();
         report.spatialGridCellCount = spatialGrid.getCellCount();
         report.spatialGridAgentCount = spatialGrid.getAgentCount();
-        
-        // Calculate cache hit rates
+
+        // Calculate neighbor query average time if available
         PerformanceMetric neighborMetric = operationMetrics.get("neighbor_query");
         if (neighborMetric != null) {
             report.spatialQueryAvgTime = neighborMetric.getAverageTime();
         }
-        
+
+        // Attach core optimizer report for system-level visibility (optional)
+        report.coreReport = coreOptimizer.getOptimizationReport();
+
         return report;
     }
     
     /**
      * AUTO-TUNE PERFORMANCE
-     * Adjust settings based on performance metrics
+     * Adjust settings based on performance metrics from existing systems
      */
     public void autoTunePerformance() {
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastOptimizationCheck < OPTIMIZATION_CHECK_INTERVAL) {
-            return; // Don't check too frequently
+            return;
         }
         
         lastOptimizationCheck = currentTime;
         
-        // Check neighbor query performance
-        PerformanceMetric neighborMetric = operationMetrics.get("neighbor_query");
-        if (neighborMetric != null) {
-            double avgTime = neighborMetric.getAverageTime();
-            
-            if (avgTime > 5.0 && !enableSpatialPartitioning) {
-                // Neighbor queries too slow, enable spatial partitioning
-                enableSpatialPartitioning = true;
-                System.out.println("Auto-tune: Enabled spatial partitioning (queries too slow)");
-            }
+        // Use PerformanceMonitor for FPS-based tuning
+        PerformanceMonitor.PerformanceMetrics metrics = performanceMonitor.getCurrentMetrics();
+        
+        if (metrics.currentFPS < 30.0 && !enableSpatialPartitioning) {
+            enableSpatialPartitioning = true;
+            System.out.println("Auto-tune: Enabled spatial partitioning (FPS too low)");
         }
         
-        // Check cache hit rate
-        if (flockingCache.size() > maxCacheSize * 0.9) {
-            // Cache almost full, increase size
-            maxCacheSize = (int) (maxCacheSize * 1.5);
-            System.out.println("Auto-tune: Increased cache size to " + maxCacheSize);
+        if (metrics.currentFPS < 20.0 && !enableCaching) {
+            enableCaching = true;
+            System.out.println("Auto-tune: Enabled caching (FPS critical)");
         }
         
-        // Check flocking performance
-        PerformanceMetric flockingMetric = operationMetrics.get("flocking_calculation");
-        if (flockingMetric != null) {
-            double avgTime = flockingMetric.getAverageTime();
-            
-            if (avgTime > 5.0 && !enableCaching) {
-                // Flocking too slow, enable caching
-                enableCaching = true;
-                System.out.println("Auto-tune: Enabled caching (flocking too slow)");
-            }
+        // Check cache performance
+        CacheManager.CacheStatistics cacheStats = cacheManager.getCacheStatistics();
+        if (cacheStats.getHitRate() < 0.3) {
+            // Low hit rate, increase cache expiration time
+            cacheExpirationTime = Math.min(500, cacheExpirationTime * 2);
+            System.out.println("Auto-tune: Increased cache expiration to " + cacheExpirationTime + "ms");
         }
     }
     
@@ -415,16 +395,15 @@ public class PerformanceOptimizer {
      */
     public void clearCaches() {
         flockingCache.clear();
-        taskScoreCache.clear();
-        formationCache.clear();
-        System.out.println("All caches cleared");
+        cacheManager.invalidateAll();
+        System.out.println("All caches cleared (local + CacheManager invalidated)");
     }
     
     /**
      * RESET METRICS
      */
     public void resetMetrics() {
-        operationMetrics.clear();
+        performanceMonitor.reset();
         System.out.println("Performance metrics reset");
     }
     
@@ -450,7 +429,79 @@ public class PerformanceOptimizer {
     // Getters
     public boolean isCachingEnabled() { return enableCaching; }
     public boolean isSpatialPartitioningEnabled() { return enableSpatialPartitioning; }
+    public CacheManager getCacheManager() { return cacheManager; }
+    public PerformanceMonitor getPerformanceMonitor() { return performanceMonitor; }
+    public MetricsCollector getMetricsCollector() { return metricsCollector; }
+
+    // Getters for cache sizes
     public int getFlockingCacheSize() { return flockingCache.size(); }
     public int getTaskScoreCacheSize() { return taskScoreCache.size(); }
     public int getFormationCacheSize() { return formationCache.size(); }
+
+    // Expose core optimizer capabilities
+    public com.team6.swarm.core.PerformanceOptimizer.OptimizationResult optimize() {
+        return coreOptimizer.optimize();
+    }
+
+    public com.team6.swarm.core.PerformanceOptimizer.OptimizationReport getCoreOptimizationReport() {
+        return coreOptimizer.getOptimizationReport();
+    }
+
+    public void setCoreAutoTuningEnabled(boolean enabled) {
+        coreOptimizer.setAutoTuningEnabled(enabled);
+    }
+
+    public Object getCoreParameter(String key) { return coreOptimizer.getParameter(key); }
+    public void setCoreParameter(String key, Object value) { coreOptimizer.setParameter(key, value); }
+
+    // Simple local metric class for recording operation timings
+    private static class PerformanceMetric {
+        private final String name;
+        private final List<Double> values = new ArrayList<>();
+        private final int maxSize = 200;
+
+        public PerformanceMetric(String name) {
+            this.name = name;
+        }
+
+        public void recordExecution(double durationMs) {
+            values.add(durationMs);
+            while (values.size() > maxSize) values.remove(0);
+        }
+
+        public double getAverageTime() {
+            return values.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+        }
+
+        @Override
+        public String toString() {
+            return String.format("%s: avg=%.3fms, samples=%d", name, getAverageTime(), values.size());
+        }
+    }
+
+    // Lightweight performance report that combines local optimizer stats with core report
+    public static class PerformanceReport {
+        public long timestamp;
+        public final List<PerformanceMetric> metrics = new ArrayList<>();
+        public int flockingCacheSize;
+        public int taskScoreCacheSize;
+        public int formationCacheSize;
+        public int spatialGridCellCount;
+        public int spatialGridAgentCount;
+        public double spatialQueryAvgTime;
+        public com.team6.swarm.core.PerformanceOptimizer.OptimizationReport coreReport;
+
+        public void addMetric(PerformanceMetric metric) { metrics.add(metric); }
+
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            sb.append("PerformanceReport @ ").append(timestamp).append("\n");
+            sb.append("FlockingCache=" + flockingCacheSize + ", TaskScoreCache=" + taskScoreCacheSize + ", FormationCache=" + formationCacheSize + "\n");
+            sb.append("SpatialGrid: cells=" + spatialGridCellCount + ", agents=" + spatialGridAgentCount + ", neighborAvgMs=" + String.format("%.3f", spatialQueryAvgTime) + "\n");
+            for (PerformanceMetric m : metrics) sb.append(m.toString()).append("\n");
+            if (coreReport != null) sb.append("CORE:").append(coreReport.toString()).append("\n");
+            return sb.toString();
+        }
+    }
 }

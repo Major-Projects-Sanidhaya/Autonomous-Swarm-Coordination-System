@@ -3,42 +3,15 @@
  *
  * PURPOSE:
  * - Monitor quality and effectiveness of intelligence algorithms
- * - Track flocking cohesion and coordination metrics
- * - Measure decision-making speed and accuracy
- * - Evaluate task allocation efficiency
- * - Assess formation accuracy and stability
+ * - Integrates with Week 7-8 monitoring systems
+ * - Provides unified metrics interface for intelligence systems
+ * - Leverages SystemHealthMonitor and SwarmAnalytics
  *
- * KEY METRICS:
- *
- * FLOCKING METRICS:
- * - Cohesion Quality: How tightly swarm stays together (0.0-1.0)
- * - Separation Safety: Collision avoidance effectiveness (0.0-1.0)
- * - Alignment Quality: Velocity matching across swarm (0.0-1.0)
- * - Flocking Stability: Movement smoothness (low jitter)
- *
- * DECISION METRICS:
- * - Consensus Speed: Time to reach voting agreement
- * - Decision Quality: Success rate of democratic choices
- * - Vote Participation: Percentage of agents voting
- * - Consensus Stability: Agreement over time
- *
- * TASK METRICS:
- * - Task Completion Rate: Successfully finished tasks
- * - Assignment Efficiency: Task-to-agent matching quality
- * - Workload Balance: Fair distribution across agents
- * - Failure Rate: Tasks that couldn't be completed
- *
- * FORMATION METRICS:
- * - Formation Accuracy: Position error from target
- * - Formation Stability: Consistency over time
- * - Transition Smoothness: Quality of formation changes
- * - Collision Avoidance: Near-miss count during formations
- *
- * OVERALL COORDINATION:
- * - System Responsiveness: Time to react to events
- * - Multi-Agent Efficiency: Coordination overhead
- * - Adaptability: Recovery from disruptions
- * - Scalability: Performance with agent count
+ * INTEGRATION WITH EXISTING SYSTEMS:
+ * - Uses SystemHealthMonitor from Week 7 for health tracking
+ * - Uses SwarmAnalytics from Week 8 for behavior analysis
+ * - Uses MetricsCollector from Week 8 for time-series data
+ * - Extends existing monitoring with intelligence-specific metrics
  */
 package com.team6.swarm.intelligence.optimization;
 
@@ -46,19 +19,16 @@ import com.team6.swarm.core.*;
 import java.util.*;
 
 public class BehaviorMetrics {
-    // Flocking metrics
+    // Use existing Week 7-8 systems
+    private SystemHealthMonitor healthMonitor;
+    private SwarmAnalytics swarmAnalytics;
+    private MetricsCollector metricsCollector;
+    
+    // Custom metrics for intelligence-specific tracking
     private FlockingQualityMetrics flockingMetrics;
-    
-    // Decision metrics
     private DecisionQualityMetrics decisionMetrics;
-    
-    // Task metrics
     private TaskEfficiencyMetrics taskMetrics;
-    
-    // Formation metrics
     private FormationQualityMetrics formationMetrics;
-    
-    // Overall coordination
     private CoordinationEfficiencyMetrics coordinationMetrics;
     
     // Tracking
@@ -69,13 +39,20 @@ public class BehaviorMetrics {
      * Constructor
      */
     public BehaviorMetrics() {
+        this.healthMonitor = new SystemHealthMonitor();
+        this.swarmAnalytics = new SwarmAnalytics();
+        this.metricsCollector = new MetricsCollector();
+        
         this.flockingMetrics = new FlockingQualityMetrics();
         this.decisionMetrics = new DecisionQualityMetrics();
         this.taskMetrics = new TaskEfficiencyMetrics();
         this.formationMetrics = new FormationQualityMetrics();
         this.coordinationMetrics = new CoordinationEfficiencyMetrics();
+        
         this.metricsStartTime = System.currentTimeMillis();
         this.updateCount = 0;
+        
+        System.out.println("BehaviorMetrics initialized with Week 7-8 system integration");
     }
     
     // ==================== FLOCKING METRICS ====================
@@ -83,29 +60,33 @@ public class BehaviorMetrics {
     /**
      * MEASURE FLOCKING COHESION
      * Calculate how well swarm stays together
+     * Also uses SwarmAnalytics for additional analysis
      */
     public void measureFlockingCohesion(List<AgentState> agents) {
         if (agents.size() < 2) {
-            flockingMetrics.cohesionQuality = 1.0;
+            flockingMetrics.recordCohesion(1.0);
             return;
         }
         
-        // Calculate swarm center
-        Point2D center = calculateSwarmCenter(agents);
+        // Use SwarmAnalytics for comprehensive behavior analysis
+        SwarmAnalytics.SwarmBehaviorSnapshot snapshot = swarmAnalytics.analyzeSwarmBehavior(agents);
         
-        // Calculate average distance from center
-        double totalDistance = 0;
-        for (AgentState agent : agents) {
-            totalDistance += agent.position.distanceTo(center);
+        if (snapshot != null) {
+            // Use the cohesion score from SwarmAnalytics
+            flockingMetrics.recordCohesion(snapshot.cohesionScore);
+            metricsCollector.recordMetric("swarm_cohesion", snapshot.cohesionScore);
+        } else {
+            // Fallback calculation
+            Point2D center = calculateSwarmCenter(agents);
+            double totalDistance = 0;
+            for (AgentState agent : agents) {
+                totalDistance += agent.position.distanceTo(center);
+            }
+            double avgDistance = totalDistance / agents.size();
+            double cohesion = Math.max(0, 1.0 - (avgDistance / 200.0));
+            flockingMetrics.recordCohesion(cohesion);
+            metricsCollector.recordMetric("swarm_cohesion", cohesion);
         }
-        double avgDistance = totalDistance / agents.size();
-        
-        // Calculate cohesion quality (lower distance = better cohesion)
-        // Perfect cohesion (0 distance) = 1.0
-        // Poor cohesion (200+ distance) = 0.0
-        double cohesion = Math.max(0, 1.0 - (avgDistance / 200.0));
-        
-        flockingMetrics.recordCohesion(cohesion);
     }
     
     /**
@@ -114,7 +95,7 @@ public class BehaviorMetrics {
      */
     public void measureSeparationSafety(List<AgentState> agents) {
         if (agents.size() < 2) {
-            flockingMetrics.separationSafety = 1.0;
+            flockingMetrics.recordSeparation(1.0);
             return;
         }
         
@@ -148,7 +129,7 @@ public class BehaviorMetrics {
      */
     public void measureAlignmentQuality(List<AgentState> agents) {
         if (agents.size() < 2) {
-            flockingMetrics.alignmentQuality = 1.0;
+            flockingMetrics.recordAlignment(1.0);
             return;
         }
         
@@ -256,7 +237,7 @@ public class BehaviorMetrics {
      */
     public void measureWorkloadBalance(Map<Integer, Integer> agentTaskCounts) {
         if (agentTaskCounts.isEmpty()) {
-            taskMetrics.workloadBalance = 1.0;
+            taskMetrics.recordWorkloadBalance(1.0);
             return;
         }
         
@@ -289,7 +270,7 @@ public class BehaviorMetrics {
     public void measureFormationAccuracy(List<AgentState> agents,
                                         Map<Integer, Point2D> targetPositions) {
         if (targetPositions.isEmpty()) {
-            formationMetrics.formationAccuracy = 1.0;
+            formationMetrics.recordAccuracy(1.0);
             return;
         }
         
@@ -339,7 +320,7 @@ public class BehaviorMetrics {
      * MEASURE COORDINATION EFFICIENCY
      */
     public void measureCoordinationEfficiency(int agentCount, 
-                                             double computationTimeMs) {
+                                              double computationTimeMs) {
         // Efficiency = expected time / actual time
         // Expected time increases with agent count
         double expectedTime = agentCount * 0.5; // 0.5ms per agent baseline
@@ -356,16 +337,18 @@ public class BehaviorMetrics {
      */
     public MetricsReport generateReport() {
         MetricsReport report = new MetricsReport();
-        report.timestamp = System.currentTimeMillis();
-        report.durationSeconds = (report.timestamp - metricsStartTime) / 1000;
-        report.updateCount = updateCount;
+        report.setTimestamp(System.currentTimeMillis());
+        report.setDurationSeconds((report.getTimestamp() - metricsStartTime) / 1000);
+        report.setUpdateCount(updateCount);
         
         // Populate metrics
-        report.flockingMetrics = flockingMetrics;
-        report.decisionMetrics = decisionMetrics;
-        report.taskMetrics = taskMetrics;
-        report.formationMetrics = formationMetrics;
-        report.coordinationMetrics = coordinationMetrics;
+        report.setFlockingMetrics(flockingMetrics);
+        report.setDecisionMetrics(decisionMetrics);
+        report.setTaskMetrics(taskMetrics);
+        report.setFormationMetrics(formationMetrics);
+        report.setCoordinationMetrics(coordinationMetrics);
+        // Include system health report from core monitor
+        report.setSystemHealthReport(healthMonitor.getHealthReport());
         
         return report;
     }
@@ -380,36 +363,36 @@ public class BehaviorMetrics {
         System.out.println();
         
         System.out.println("Flocking Quality:");
-        System.out.println("  Cohesion: " + formatPercent(flockingMetrics.cohesionQuality));
-        System.out.println("  Separation Safety: " + formatPercent(flockingMetrics.separationSafety));
-        System.out.println("  Alignment: " + formatPercent(flockingMetrics.alignmentQuality));
-        System.out.println("  Stability: " + formatPercent(flockingMetrics.stabilityScore));
+        System.out.println("  Cohesion: " + formatPercent(flockingMetrics.getCohesionQuality()));
+        System.out.println("  Separation Safety: " + formatPercent(flockingMetrics.getSeparationSafety()));
+        System.out.println("  Alignment: " + formatPercent(flockingMetrics.getAlignmentQuality()));
+        System.out.println("  Stability: " + formatPercent(flockingMetrics.getStabilityScore()));
         
         System.out.println();
         System.out.println("Decision Making:");
         System.out.println("  Avg Consensus Time: " + 
-            String.format("%.1fms", decisionMetrics.avgConsensusTime));
-        System.out.println("  Success Rate: " + formatPercent(decisionMetrics.successRate));
+            String.format("%.1fms", decisionMetrics.getAvgConsensusTime()));
+        System.out.println("  Success Rate: " + formatPercent(decisionMetrics.getSuccessRate()));
         System.out.println("  Participation Rate: " + 
-            formatPercent(decisionMetrics.avgParticipationRate));
+            formatPercent(decisionMetrics.getAvgParticipationRate()));
         
         System.out.println();
         System.out.println("Task Management:");
-        System.out.println("  Completion Rate: " + formatPercent(taskMetrics.completionRate));
+        System.out.println("  Completion Rate: " + formatPercent(taskMetrics.getCompletionRate()));
         System.out.println("  Avg Assignment Score: " + 
-            String.format("%.2f", taskMetrics.avgAssignmentScore));
-        System.out.println("  Workload Balance: " + formatPercent(taskMetrics.workloadBalance));
+            String.format("%.2f", taskMetrics.getAvgAssignmentScore()));
+        System.out.println("  Workload Balance: " + formatPercent(taskMetrics.getWorkloadBalance()));
         
         System.out.println();
         System.out.println("Formation Quality:");
-        System.out.println("  Accuracy: " + formatPercent(formationMetrics.formationAccuracy));
-        System.out.println("  Stability: " + formatPercent(formationMetrics.stabilityScore));
+        System.out.println("  Accuracy: " + formatPercent(formationMetrics.getFormationAccuracy()));
+        System.out.println("  Stability: " + formatPercent(formationMetrics.getStabilityScore()));
         
         System.out.println();
         System.out.println("Overall Coordination:");
         System.out.println("  Avg Response Time: " + 
-            String.format("%.1fms", coordinationMetrics.avgResponseTime));
-        System.out.println("  Efficiency: " + formatPercent(coordinationMetrics.efficiency));
+            String.format("%.1fms", coordinationMetrics.getAvgResponseTime()));
+        System.out.println("  Efficiency: " + formatPercent(coordinationMetrics.getEfficiency()));
         
         System.out.println();
         System.out.println("========================================");
@@ -450,143 +433,25 @@ public class BehaviorMetrics {
         }
         return new Point2D(sumX / agents.size(), sumY / agents.size());
     }
-}
-
-// ==================== METRIC DATA CLASSES ====================
-
-class FlockingQualityMetrics {
-    double cohesionQuality = 0.0;
-    double separationSafety = 0.0;
-    double alignmentQuality = 0.0;
-    double stabilityScore = 0.0;
     
-    int cohesionSamples = 0;
-    int separationSamples = 0;
-    int alignmentSamples = 0;
-    int stabilitySamples = 0;
-    
-    void recordCohesion(double quality) {
-        cohesionQuality = (cohesionQuality * cohesionSamples + quality) / (cohesionSamples + 1);
-        cohesionSamples++;
+    // Getters
+    public FlockingQualityMetrics getFlockingMetrics() {
+        return flockingMetrics;
     }
     
-    void recordSeparation(double safety) {
-        separationSafety = (separationSafety * separationSamples + safety) / (separationSamples + 1);
-        separationSamples++;
+    public DecisionQualityMetrics getDecisionMetrics() {
+        return decisionMetrics;
     }
     
-    void recordAlignment(double quality) {
-        alignmentQuality = (alignmentQuality * alignmentSamples + quality) / (alignmentSamples + 1);
-        alignmentSamples++;
+    public TaskEfficiencyMetrics getTaskMetrics() {
+        return taskMetrics;
     }
     
-    void recordStability(double stability) {
-        stabilityScore = (stabilityScore * stabilitySamples + stability) / (stabilitySamples + 1);
-        stabilitySamples++;
-    }
-}
-
-class DecisionQualityMetrics {
-    int totalVotes = 0;
-    int successfulVotes = 0;
-    double avgConsensusTime = 0.0;
-    double avgParticipationRate = 0.0;
-    double successRate = 0.0;
-    
-    void recordVote(long durationMs, boolean consensusReached, int participants, int total) {
-        totalVotes++;
-        if (consensusReached) successfulVotes++;
-        
-        avgConsensusTime = (avgConsensusTime * (totalVotes - 1) + durationMs) / totalVotes;
-        
-        double participationRate = total > 0 ? (double) participants / total : 0.0;
-        avgParticipationRate = (avgParticipationRate * (totalVotes - 1) + participationRate) / totalVotes;
-        
-        successRate = (double) successfulVotes / totalVotes;
+    public FormationQualityMetrics getFormationMetrics() {
+        return formationMetrics;
     }
     
-    int successfulOutcomes = 0;
-    int totalOutcomes = 0;
-    
-    void recordOutcome(boolean successful) {
-        totalOutcomes++;
-        if (successful) successfulOutcomes++;
+    public CoordinationEfficiencyMetrics getCoordinationMetrics() {
+        return coordinationMetrics;
     }
-}
-
-class TaskEfficiencyMetrics {
-    int totalAssignments = 0;
-    int successfulCompletions = 0;
-    int failedCompletions = 0;
-    double avgAssignmentScore = 0.0;
-    double completionRate = 0.0;
-    double avgEfficiency = 0.0;
-    double workloadBalance = 1.0;
-    
-    void recordAssignment(double score) {
-        avgAssignmentScore = (avgAssignmentScore * totalAssignments + score) / (totalAssignments + 1);
-        totalAssignments++;
-    }
-    
-    void recordCompletion(boolean successful, long duration, double efficiency) {
-        if (successful) {
-            successfulCompletions++;
-            avgEfficiency = (avgEfficiency * (successfulCompletions - 1) + efficiency) / successfulCompletions;
-        } else {
-            failedCompletions++;
-        }
-        
-        int total = successfulCompletions + failedCompletions;
-        completionRate = total > 0 ? (double) successfulCompletions / total : 0.0;
-    }
-    
-    void recordWorkloadBalance(double balance) {
-        workloadBalance = balance;
-    }
-}
-
-class FormationQualityMetrics {
-    double formationAccuracy = 0.0;
-    double stabilityScore = 0.0;
-    int accuracySamples = 0;
-    int stabilitySamples = 0;
-    
-    void recordAccuracy(double accuracy) {
-        formationAccuracy = (formationAccuracy * accuracySamples + accuracy) / (accuracySamples + 1);
-        accuracySamples++;
-    }
-    
-    void recordStability(double stability) {
-        stabilityScore = (stabilityScore * stabilitySamples + stability) / (stabilitySamples + 1);
-        stabilitySamples++;
-    }
-}
-
-class CoordinationEfficiencyMetrics {
-    double avgResponseTime = 0.0;
-    double efficiency = 1.0;
-    int responseSamples = 0;
-    int efficiencySamples = 0;
-    
-    void recordResponse(String eventType, long responseTimeMs) {
-        avgResponseTime = (avgResponseTime * responseSamples + responseTimeMs) / (responseSamples + 1);
-        responseSamples++;
-    }
-    
-    void recordEfficiency(double eff) {
-        efficiency = (efficiency * efficiencySamples + eff) / (efficiencySamples + 1);
-        efficiencySamples++;
-    }
-}
-
-class MetricsReport {
-    long timestamp;
-    long durationSeconds;
-    int updateCount;
-    
-    FlockingQualityMetrics flockingMetrics;
-    DecisionQualityMetrics decisionMetrics;
-    TaskEfficiencyMetrics taskMetrics;
-    FormationQualityMetrics formationMetrics;
-    CoordinationEfficiencyMetrics coordinationMetrics;
 }
