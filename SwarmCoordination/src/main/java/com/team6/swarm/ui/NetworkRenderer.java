@@ -20,7 +20,6 @@ public class NetworkRenderer {
     
     // Message animation state
     private final List<MessageAnimation> activeAnimations = new ArrayList<>();
-    private final Map<String, ConnectionInfo> connections = new HashMap<>();
     
     // Configuration
     private boolean showCommunicationLinks = true;
