@@ -156,11 +156,11 @@ public class Week8IntegrationTest {
         System.out.println("  ✓ Heartbeat recording successful");
 
         // Test failure reporting
-<<<<<<< HEAD
         faultTolerance.reportFailure("agent2", "Test failure");
-=======
         faultTolerance.markAgentFailed("agent2", "Test failure");
->>>>>>> 1fa93694c41cba9e58ab04b43a274cd7d08ef79e
+
+        faultTolerance.markAgentFailed("agent2", "Test failure");
+main
         status = faultTolerance.getAgentStatus("agent2");
         assert status == FaultTolerance.AgentStatus.FAILED : "Agent should be failed";
         System.out.println("  ✓ Failure reporting successful");
@@ -198,11 +198,10 @@ public class Week8IntegrationTest {
         System.out.println("  ✓ Snapshot created: " + snapshotId);
 
         // Test state restoration
-<<<<<<< HEAD
-        AgentState restored = recoveryManager.restoreLatest("agent1");
-=======
         AgentState restored = recoveryManager.restoreLatestSnapshot("agent1");
->>>>>>> 1fa93694c41cba9e58ab04b43a274cd7d08ef79e
+
+        AgentState restored = recoveryManager.restoreLatestSnapshot("agent1");
+
         assert restored != null : "State restoration failed";
         assert restored.getPosition().equals(position) : "Restored state doesn't match";
         System.out.println("  ✓ State restoration successful");
@@ -248,15 +247,12 @@ public class Week8IntegrationTest {
         System.out.println("  ✓ Statistics: " + stats);
 
         // Test recent values
-<<<<<<< HEAD
-        List<Double> recent = collector.getRecentValues("test.metric", 10);
-=======
         List<MetricsCollector.DataPoint> recentDataPoints = collector.getRecentDataPoints("test.metric", 10);
         List<Double> recent = new ArrayList<>();
         for (MetricsCollector.DataPoint dp : recentDataPoints) {
             recent.add(dp.getValue());
         }
->>>>>>> 1fa93694c41cba9e58ab04b43a274cd7d08ef79e
+
         assert recent.size() == 10 : "Recent values count incorrect";
         System.out.println("  ✓ Recent values retrieved: " + recent.size());
 
@@ -270,13 +266,14 @@ public class Week8IntegrationTest {
         batchMetrics.put("cpu.usage", 50.0);
         batchMetrics.put("memory.usage", 70.0);
         batchMetrics.put("thread.count", 10.0);
-<<<<<<< HEAD
-        collector.recordMetrics(batchMetrics);
-=======
         for (Map.Entry<String, Double> entry : batchMetrics.entrySet()) {
             collector.recordMetric(entry.getKey(), entry.getValue());
         }
->>>>>>> 1fa93694c41cba9e58ab04b43a274cd7d08ef79e
+
+        for (Map.Entry<String, Double> entry : batchMetrics.entrySet()) {
+            collector.recordMetric(entry.getKey(), entry.getValue());
+        }
+
         System.out.println("  ✓ Batch metrics recorded");
 
         // Test metrics

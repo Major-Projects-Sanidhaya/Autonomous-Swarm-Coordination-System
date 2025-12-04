@@ -313,21 +313,6 @@ public class ComprehensiveIntegrationTest {
         printTestHeader("Week 7: Performance Optimizer");
 
         assertTest("PerformanceOptimizer initialization", () -> {
-<<<<<<< HEAD
-            PerformanceOptimizer optimizer = new PerformanceOptimizer();
-            return optimizer != null;
-        });
-
-        assertTest("PerformanceOptimizer captures performance snapshot", () -> {
-            PerformanceOptimizer optimizer = new PerformanceOptimizer();
-            PerformanceOptimizer.PerformanceSnapshot snapshot = optimizer.captureSnapshot();
-            return snapshot.cpuUsage >= 0 && snapshot.memoryUsage >= 0;
-        });
-
-        assertTest("PerformanceOptimizer bottleneck detection", () -> {
-            PerformanceOptimizer optimizer = new PerformanceOptimizer();
-            List<PerformanceOptimizer.Bottleneck> bottlenecks = optimizer.detectBottlenecks();
-=======
             new PerformanceOptimizer();
             return true;
         });
@@ -342,7 +327,7 @@ public class ComprehensiveIntegrationTest {
         assertTest("PerformanceOptimizer bottleneck detection", () -> {
             PerformanceOptimizer optimizer = new PerformanceOptimizer();
             List<PerformanceOptimizer.Bottleneck> bottlenecks = optimizer.analyzeBottlenecks();
->>>>>>> 1fa93694c41cba9e58ab04b43a274cd7d08ef79e
+main
             return bottlenecks != null;
         });
 
@@ -599,13 +584,12 @@ public class ComprehensiveIntegrationTest {
         printTestHeader("Week 8: Intrusion Detector");
 
         assertTest("IntrusionDetector initialization", () -> {
-<<<<<<< HEAD
-            IntrusionDetector detector = new IntrusionDetector();
-            return detector != null;
-=======
             new IntrusionDetector();
             return true; // Passes if no exception is thrown
->>>>>>> 1fa93694c41cba9e58ab04b43a274cd7d08ef79e
+
+            new IntrusionDetector();
+            return true; // Passes if no exception is thrown
+main
         });
 
         assertTest("IntrusionDetector threat detection", () -> {
