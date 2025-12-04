@@ -181,6 +181,41 @@ public class IntegrationTest {
         assert !result.expired : "Vote should not be expired before deadline";
         assert result.responses.size() == 2 : "Should have responses from two voters";
         
+        // Test duplicate proposalId prevention
+        try {
+            protocol.startVote(1, proposal, expectedVoters);
+            assert false : "Should throw exception for duplicate proposalId";
+        } catch (IllegalArgumentException e) {
+            assert e.getMessage().contains("already in progress") : "Exception should mention duplicate proposalId";
+        }
+        
+        // Test empty expectedVoters prevention
+        try {
+            protocol.startVote(1, proposal, new HashSet<>());
+            assert false : "Should throw exception for empty expectedVoters";
+        } catch (IllegalArgumentException e) {
+            assert e.getMessage().contains("must not be null or empty") : "Exception should mention empty expectedVoters";
+        }
+        
+        // Test null expectedVoters prevention
+        try {
+            protocol.startVote(1, proposal, null);
+            assert false : "Should throw exception for null expectedVoters";
+        } catch (IllegalArgumentException e) {
+            assert e.getMessage().contains("must not be null or empty") : "Exception should mention null expectedVoters";
+        }
+        
+        // Test unauthorized voter prevention
+        Map<String, Object> unauthorizedResponse = new HashMap<>();
+        unauthorizedResponse.put("proposalId", "vote-consensus-1");
+        unauthorizedResponse.put("choice", "LINE");
+        try {
+            protocol.recordResponse(99, unauthorizedResponse); // Agent 99 not in expectedVoters
+            assert false : "Should throw exception for unauthorized voter";
+        } catch (IllegalArgumentException e) {
+            assert e.getMessage().contains("not in the expected voters") : "Exception should mention unauthorized voter";
+        }
+        
         System.out.println("✓ Consensus support tests passed");
     }
     
@@ -298,7 +333,10 @@ public class IntegrationTest {
         assert snapshot.averageLatency >= 0 : "Average latency should be non-negative";
         assert snapshot.failureRate >= 0 && snapshot.failureRate <= 1 : "Failure rate should be between 0 and 1";
         assert snapshot.pendingMessages >= 0 : "Pending messages should be non-negative";
-        assert snapshot.pendingMessages == manager.getPendingMessageCount() : "Pending count should match manager";
+        int snapshotPending = snapshot.pendingMessages;
+        int managerPending = manager.getPendingMessageCount();
+        assert snapshotPending == managerPending : 
+            String.format("Pending message count mismatch: snapshot=%d, manager=%d", snapshotPending, managerPending);
         
         // Validate individual metric methods
         double msgsPerSec = metrics.getMessagesPerSecond();

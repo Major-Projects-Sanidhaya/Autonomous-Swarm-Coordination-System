@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * VOTINGPROTOCOL CLASS - Lightweight Consensus Support (Week 7–8)
@@ -22,7 +23,7 @@ import java.util.Set;
 public class VotingProtocol {
 
     private final CommunicationManager communicationManager;
-    private final Map<String, VoteState> activeVotes = new HashMap<>();
+    private final Map<String, VoteState> activeVotes = new ConcurrentHashMap<>();
 
     /**
      * Internal state for a single vote / consensus round.
@@ -77,6 +78,9 @@ public class VotingProtocol {
     }
 
     public VotingProtocol(CommunicationManager communicationManager) {
+        if (communicationManager == null) {
+            throw new IllegalArgumentException("communicationManager must not be null");
+        }
         this.communicationManager = communicationManager;
     }
 
@@ -88,10 +92,16 @@ public class VotingProtocol {
      * - deadline (Long, absolute timestamp in ms)
      *
      * The payload may include additional application-specific fields (question, options, etc.).
+     *
+     * @throws IllegalArgumentException if proposalPayload is invalid, expectedVoters is null/empty, or if a vote with the same proposalId already exists
      */
     public void startVote(int initiatorId,
                           Map<String, Object> proposalPayload,
                           Set<Integer> expectedVoters) {
+        if (expectedVoters == null || expectedVoters.isEmpty()) {
+            throw new IllegalArgumentException("expectedVoters must not be null or empty");
+        }
+        
         Object proposalIdObj = proposalPayload.get("proposalId");
         Object deadlineObj = proposalPayload.get("deadline");
 
@@ -102,10 +112,24 @@ public class VotingProtocol {
         String proposalId = (String) proposalIdObj;
         long deadlineMillis = (Long) deadlineObj;
 
-        VoteState state = new VoteState(proposalId, initiatorId, expectedVoters, deadlineMillis);
-        synchronized (activeVotes) {
-            activeVotes.put(proposalId, state);
+        // Check if a vote with this proposalId already exists
+        VoteState existingState = activeVotes.get(proposalId);
+        if (existingState != null) {
+            // Check if it's expired - if so, we can replace it
+            long now = System.currentTimeMillis();
+            synchronized (existingState) {
+                if (!existingState.isExpired(now)) {
+                    throw new IllegalArgumentException(
+                        "A vote with proposalId '" + proposalId + "' is already in progress. " +
+                        "Wait for it to complete or expire before starting a new vote with the same ID.");
+                }
+            }
+            // If expired, remove it and continue (will be replaced below)
+            activeVotes.remove(proposalId);
         }
+
+        VoteState state = new VoteState(proposalId, initiatorId, expectedVoters, deadlineMillis);
+        activeVotes.put(proposalId, state);
 
         communicationManager.broadcastVote(initiatorId, proposalPayload);
     }
@@ -115,6 +139,8 @@ public class VotingProtocol {
      *
      * REQUIRED PAYLOAD FIELD:
      * - proposalId (String) referencing the original proposal
+     *
+     * @throws IllegalArgumentException if voterId is not in the expectedVoters set for this proposal
      */
     public void recordResponse(int voterId, Map<String, Object> responsePayload) {
         Object proposalIdObj = responsePayload.get("proposalId");
@@ -123,46 +149,66 @@ public class VotingProtocol {
         }
 
         String proposalId = (String) proposalIdObj;
-        VoteState state;
-        synchronized (activeVotes) {
-            state = activeVotes.get(proposalId);
-        }
+        VoteState state = activeVotes.get(proposalId);
         if (state == null) {
             return; // Unknown or already completed/expired vote
         }
 
+        // Synchronize on state to safely modify responses
+        // Using ConcurrentHashMap ensures state reference is safely obtained
         synchronized (state) {
+            // Double-check: verify state is still in activeVotes (not removed by cleanup)
+            if (!activeVotes.containsKey(proposalId)) {
+                return; // State was removed by cleanupExpiredVotes
+            }
+            
+            // Validate that the voter is in the expected voters set
+            if (!state.expectedVoters.contains(voterId)) {
+                throw new IllegalArgumentException(
+                    "Voter " + voterId + " is not in the expected voters set for proposal '" + 
+                    proposalId + "'. Expected voters: " + state.expectedVoters);
+            }
+            
             state.responses.put(voterId, new HashMap<>(responsePayload));
         }
     }
 
     /**
      * Returns a snapshot of the current state for a given proposal.
+     * Thread-safe: Uses double-check pattern to ensure state is still valid.
      */
     public VoteResult getVoteResult(String proposalId) {
-        VoteState state;
-        synchronized (activeVotes) {
-            state = activeVotes.get(proposalId);
-        }
+        VoteState state = activeVotes.get(proposalId);
         if (state == null) {
             return null;
         }
+        
         long now = System.currentTimeMillis();
         boolean complete;
         boolean expired;
         Map<Integer, Map<String, Object>> responsesCopy;
         Set<Integer> expectedCopy;
+        String proposalIdCopy;
+        int initiatorIdCopy;
 
         synchronized (state) {
+            // Double-check: verify state is still in activeVotes (not removed by cleanup)
+            if (!activeVotes.containsKey(proposalId)) {
+                return null; // State was removed by cleanupExpiredVotes
+            }
+            // Capture all state fields while holding the lock
             complete = state.isComplete();
             expired = state.isExpired(now);
             responsesCopy = new HashMap<>(state.responses);
             expectedCopy = new HashSet<>(state.expectedVoters);
+            proposalIdCopy = state.proposalId;
+            initiatorIdCopy = state.initiatorId;
         }
 
+        // Create VoteResult outside the synchronized block using captured values
         return new VoteResult(
-            state.proposalId,
-            state.initiatorId,
+            proposalIdCopy,
+            initiatorIdCopy,
             responsesCopy,
             expectedCopy,
             complete,
@@ -172,12 +218,15 @@ public class VotingProtocol {
 
     /**
      * Removes expired votes from the active vote registry.
+     * Thread-safe: Uses ConcurrentHashMap's atomic removeIf operation.
      */
     public void cleanupExpiredVotes() {
         long now = System.currentTimeMillis();
-        synchronized (activeVotes) {
-            activeVotes.values().removeIf(state -> state.isExpired(now));
-        }
+        activeVotes.values().removeIf(state -> {
+            synchronized (state) {
+                return state.isExpired(now);
+            }
+        });
     }
 }
 

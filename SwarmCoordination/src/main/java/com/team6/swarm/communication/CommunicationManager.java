@@ -212,6 +212,15 @@ public class CommunicationManager {
         messageQueue.clear();
     }
     
+    /**
+     * Get the network simulator instance for accessing configuration.
+     * 
+     * @return The NetworkSimulator instance used by this manager
+     */
+    public NetworkSimulator getNetworkSimulator() {
+        return networkSimulator;
+    }
+    
     public static class NetworkStatistics {
         public final int totalAgents;
         public final int totalConnections;

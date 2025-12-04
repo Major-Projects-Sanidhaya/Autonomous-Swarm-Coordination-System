@@ -29,6 +29,9 @@ public class CommunicationMetrics {
     private final CommunicationManager manager;
     
     public CommunicationMetrics(CommunicationManager manager) {
+        if (manager == null) {
+            throw new IllegalArgumentException("manager must not be null");
+        }
         this.manager = manager;
     }
     
@@ -78,15 +81,15 @@ public class CommunicationMetrics {
     }
     
     /**
-     * Estimate failure rate from network simulator configuration.
-     * Returns the configured failure rate (0.0 to 1.0).
-     * Note: Actual failure rate would require tracking failed vs successful deliveries.
+     * Get failure rate from network simulator configuration.
+     * Returns the configured failure rate (0.0 to 1.0) from NetworkSimulator.
+     * 
+     * NOTE: This returns the configured failure rate, not actual measured failures.
+     * For actual failure tracking, the system would need to track failed vs successful
+     * message deliveries over time.
      */
     public double getFailureRate() {
-        // Access network simulator failure rate if exposed
-        // For now, return a conservative estimate based on typical network conditions
-        // In a full implementation, this would track actual failures vs successes
-        return 0.05; // 5% default failure rate
+        return manager.getNetworkSimulator().getFailureRate();
     }
     
     /**
@@ -139,4 +142,5 @@ public class CommunicationMetrics {
         }
     }
 }
+
 

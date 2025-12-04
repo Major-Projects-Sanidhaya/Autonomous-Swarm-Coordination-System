@@ -93,11 +93,22 @@ public class CommunicationDemo {
         protocol.recordResponse(4, response4);
         System.out.println("  Agent 4 voted: LINE");
         
+        Map<String, Object> response5 = new HashMap<>();
+        response5.put("proposalId", "formation-vote-1");
+        response5.put("choice", "V_SHAPE");
+        protocol.recordResponse(5, response5);
+        System.out.println("  Agent 5 voted: V_SHAPE");
+        
         // Get vote result
         VotingProtocol.VoteResult result = protocol.getVoteResult("formation-vote-1");
+        if (result == null) {
+            System.out.println("  ⚠ Vote not found");
+            return;
+        }
+        
         System.out.println("\n  Vote Result:");
         System.out.println("    Complete: " + result.complete);
-        System.out.println("    Responses: " + result.responses.size() + "/" + result.expectedVoters);
+        System.out.println("    Responses: " + result.responses.size() + "/" + result.expectedVoters.size());
         System.out.println("    Expired: " + result.expired);
         
         if (result.complete) {
@@ -191,6 +202,8 @@ public class CommunicationDemo {
         Set<Integer> agent1Partition = manager.getPartitionForAgent(1);
         if (agent1Partition != null) {
             System.out.println("  Agent 1 is in partition with " + agent1Partition.size() + " agents");
+        } else {
+            System.out.println("  ⚠ Agent 1 not found in any partition");
         }
         
         // Check reachability
@@ -224,4 +237,5 @@ public class CommunicationDemo {
         return agents;
     }
 }
+
 
