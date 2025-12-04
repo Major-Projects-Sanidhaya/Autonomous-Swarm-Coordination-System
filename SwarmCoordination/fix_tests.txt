@@ -1,0 +1,10 @@
+Issues to fix in CoreModuleTestSuite.java:
+
+1. TaskCompletionReport - use fields directly (taskId, agentId, status, resultData) not getters
+2. SystemCommand - use getType() not getCommandType(), parameters are immutable (use getParameter)
+3. SystemMetrics - no fps field, use updatesPerSecond instead
+4. AgentCapabilities - requires constructor args (agentId, AgentState), fields are private
+5. Task - has getState() not getStatus(), has TaskState enum not TaskStatus
+6. BoundaryManager - use getInstance() not new BoundaryManager()
+7. PerformanceMonitor - use getInstance() not new PerformanceMonitor()
+8. CacheManager - check actual methods available (put/get/contains)

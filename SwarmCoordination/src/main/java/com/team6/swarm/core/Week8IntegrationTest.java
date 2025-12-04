@@ -156,7 +156,11 @@ public class Week8IntegrationTest {
         System.out.println("  ✓ Heartbeat recording successful");
 
         // Test failure reporting
+        faultTolerance.reportFailure("agent2", "Test failure");
         faultTolerance.markAgentFailed("agent2", "Test failure");
+
+        faultTolerance.markAgentFailed("agent2", "Test failure");
+main
         status = faultTolerance.getAgentStatus("agent2");
         assert status == FaultTolerance.AgentStatus.FAILED : "Agent should be failed";
         System.out.println("  ✓ Failure reporting successful");
@@ -195,6 +199,9 @@ public class Week8IntegrationTest {
 
         // Test state restoration
         AgentState restored = recoveryManager.restoreLatestSnapshot("agent1");
+
+        AgentState restored = recoveryManager.restoreLatestSnapshot("agent1");
+
         assert restored != null : "State restoration failed";
         assert restored.getPosition().equals(position) : "Restored state doesn't match";
         System.out.println("  ✓ State restoration successful");
@@ -245,6 +252,7 @@ public class Week8IntegrationTest {
         for (MetricsCollector.DataPoint dp : recentDataPoints) {
             recent.add(dp.getValue());
         }
+
         assert recent.size() == 10 : "Recent values count incorrect";
         System.out.println("  ✓ Recent values retrieved: " + recent.size());
 
@@ -261,6 +269,11 @@ public class Week8IntegrationTest {
         for (Map.Entry<String, Double> entry : batchMetrics.entrySet()) {
             collector.recordMetric(entry.getKey(), entry.getValue());
         }
+
+        for (Map.Entry<String, Double> entry : batchMetrics.entrySet()) {
+            collector.recordMetric(entry.getKey(), entry.getValue());
+        }
+
         System.out.println("  ✓ Batch metrics recorded");
 
         // Test metrics

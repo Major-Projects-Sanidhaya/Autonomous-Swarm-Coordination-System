@@ -327,6 +327,7 @@ public class ComprehensiveIntegrationTest {
         assertTest("PerformanceOptimizer bottleneck detection", () -> {
             PerformanceOptimizer optimizer = new PerformanceOptimizer();
             List<PerformanceOptimizer.Bottleneck> bottlenecks = optimizer.analyzeBottlenecks();
+main
             return bottlenecks != null;
         });
 
@@ -585,6 +586,10 @@ public class ComprehensiveIntegrationTest {
         assertTest("IntrusionDetector initialization", () -> {
             new IntrusionDetector();
             return true; // Passes if no exception is thrown
+
+            new IntrusionDetector();
+            return true; // Passes if no exception is thrown
+main
         });
 
         assertTest("IntrusionDetector threat detection", () -> {
