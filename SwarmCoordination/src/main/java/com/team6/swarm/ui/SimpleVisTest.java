@@ -97,7 +97,19 @@ public class SimpleVisTest extends Application {
                                        AgentStatus status, double battery, 
                                        String role, double heading) {
         AgentState agent = new AgentState();
-        agent.agentId = Integer.parseInt(id.split("-")[1]); // Parse ID from "Agent-1" format
+        
+        // Safely parse agent ID from "Agent-1" format
+        int parsedId = -1;
+        String[] parts = id.split("-");
+        if (parts.length > 1) {
+            try {
+                parsedId = Integer.parseInt(parts[1]);
+            } catch (NumberFormatException e) {
+                System.err.println("Warning: Could not parse agent ID from '" + id + "', defaulting to -1");
+            }
+        }
+        agent.agentId = parsedId;
+        
         agent.agentName = id;
         agent.position = new Point2D(x, y);
         agent.status = status;

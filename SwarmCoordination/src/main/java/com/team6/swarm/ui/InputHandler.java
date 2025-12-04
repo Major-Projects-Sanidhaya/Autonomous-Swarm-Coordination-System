@@ -111,7 +111,7 @@ public class InputHandler {
     /**
      * Handle mouse click event
      */
-    private void handleMouseClick(MouseEvent event) {
+    private void handleMouseClicked(MouseEvent event) {
         if (isDragging) {
             return; // Don't process as click if it was a drag
         }
