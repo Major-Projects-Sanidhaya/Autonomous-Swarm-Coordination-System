@@ -2,15 +2,16 @@
  * INTEGRATIONTEST CLASS - Communication System Integration Validation
  *
  * PURPOSE:
- * - Validates communication integration methods across all weeks
- * - Tests message listener callbacks (Week 4)
- * - Tests voting message support (Week 5)
- * - Tests mission coordination utilities (Week 6)
+ * - Validates communication integration methods across all weeks (Weeks 4-12)
+ * - Comprehensive integration test suite for production readiness
  *
  * INTEGRATION TESTS:
  * 1. Week 4: Message listener registration and callback delivery
  * 2. Week 5: Vote proposal broadcasting and response handling
  * 3. Week 6: Task assignment routing and network partition detection
+ * 4. Week 7-8: Consensus support (VotingProtocol integration)
+ * 5. Week 9-10: Fault tolerance (FailureRecoveryPolicy, partition helpers)
+ * 6. Week 11-12: Performance metrics aggregation
  */
 package com.team6.swarm.communication;
 
@@ -34,6 +35,15 @@ public class IntegrationTest {
             
             // Test Week 6: Mission Coordination
             testMissionCoordination();
+            
+            // Test Week 7–8: Consensus Support
+            testConsensusSupport();
+
+            // Test Week 9–10: Fault Tolerance
+            testFaultTolerance();
+            
+            // Test Week 11–12: Performance Metrics
+            testPerformanceMetrics();
             
             System.out.println("\n=== All Integration Tests Passed ===");
             
@@ -128,6 +138,52 @@ public class IntegrationTest {
         System.out.println("✓ Voting message tests passed");
     }
     
+    // ===== WEEK 7–8: CONSENSUS SUPPORT =====
+    private static void testConsensusSupport() {
+        System.out.println("\n--- Week 7–8: Consensus Support ---");
+        
+        CommunicationManager manager = new CommunicationManager();
+        List<AgentState> agents = createTestAgents();
+        manager.updateTopology(agents);
+        
+        VotingProtocol protocol = new VotingProtocol(manager);
+        
+        // Define expected voters (agents 2 and 3)
+        Set<Integer> expectedVoters = new HashSet<>();
+        expectedVoters.add(2);
+        expectedVoters.add(3);
+        
+        // Create proposal payload with required fields
+        Map<String, Object> proposal = new HashMap<>();
+        proposal.put("proposalId", "vote-consensus-1");
+        proposal.put("question", "Choose formation");
+        proposal.put("options", Arrays.asList("LINE", "V_SHAPE"));
+        proposal.put("deadline", System.currentTimeMillis() + 10000L);
+        
+        // Start vote via protocol (reuses broadcastVote)
+        protocol.startVote(1, proposal, expectedVoters);
+        manager.processMessages();
+        
+        // Simulate responses from expected voters
+        Map<String, Object> response2 = new HashMap<>();
+        response2.put("proposalId", "vote-consensus-1");
+        response2.put("choice", "LINE");
+        protocol.recordResponse(2, response2);
+        
+        Map<String, Object> response3 = new HashMap<>();
+        response3.put("proposalId", "vote-consensus-1");
+        response3.put("choice", "V_SHAPE");
+        protocol.recordResponse(3, response3);
+        
+        VotingProtocol.VoteResult result = protocol.getVoteResult("vote-consensus-1");
+        assert result != null : "Vote result should not be null";
+        assert result.complete : "Vote should be complete when all expected voters respond";
+        assert !result.expired : "Vote should not be expired before deadline";
+        assert result.responses.size() == 2 : "Should have responses from two voters";
+        
+        System.out.println("✓ Consensus support tests passed");
+    }
+    
     // ===== WEEK 6: MISSION COORDINATION =====
     private static void testMissionCoordination() {
         System.out.println("\n--- Week 6: Mission Coordination ---");
@@ -165,6 +221,96 @@ public class IntegrationTest {
         assert partitions.get(0).size() >= 3 : "Partition should contain multiple agents";
         
         System.out.println("✓ Mission coordination tests passed");
+    }
+    
+    // ===== WEEK 9–10: FAULT TOLERANCE =====
+    private static void testFaultTolerance() {
+        System.out.println("\n--- Week 9–10: Fault Tolerance ---");
+        
+        CommunicationManager manager = new CommunicationManager();
+        List<AgentState> agents = createTestAgents();
+        manager.updateTopology(agents);
+        
+        FailureRecoveryPolicy recoveryPolicy = new FailureRecoveryPolicy(manager, 3);
+        
+        // Create a critical message (e.g., EMERGENCY_ALERT) between two agents
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("alertType", "CRITICAL");
+        payload.put("description", "Test emergency");
+        Message message = new Message(MessageType.EMERGENCY_ALERT, payload);
+        
+        OutgoingMessage outgoing = new OutgoingMessage(1, 2, message);
+        
+        boolean sent = recoveryPolicy.sendCritical(outgoing);
+        assert sent : "Critical message should be accepted by the queue with retries";
+        
+        manager.processMessages();
+        
+        // Validate that at least one message was delivered (using history)
+        List<IncomingMessage> history = manager.getMessageHistory();
+        boolean found = history.stream().anyMatch(m ->
+            m.originalSenderId == 1 &&
+            m.receiverId == 2 &&
+            m.messageContent.type == MessageType.EMERGENCY_ALERT
+        );
+        
+        assert found : "Critical emergency alert should appear in message history";
+        
+        // Validate partition helper returns a non-empty partition for an existing agent
+        Set<Integer> partition = manager.getPartitionForAgent(1);
+        assert partition != null && partition.size() > 0 : "Partition for agent 1 should exist and be non-empty";
+        
+        System.out.println("✓ Fault tolerance tests passed");
+    }
+    
+    // ===== WEEK 11–12: PERFORMANCE METRICS =====
+    private static void testPerformanceMetrics() {
+        System.out.println("\n--- Week 11–12: Performance Metrics ---");
+        
+        CommunicationManager manager = new CommunicationManager();
+        List<AgentState> agents = createTestAgents();
+        manager.updateTopology(agents);
+        
+        // Create metrics aggregator
+        CommunicationMetrics metrics = new CommunicationMetrics(manager);
+        
+        // Send some test messages to generate history
+        Map<String, Object> payload1 = new HashMap<>();
+        payload1.put("test", "message1");
+        Message msg1 = new Message(MessageType.POSITION_UPDATE, payload1);
+        OutgoingMessage outgoing1 = new OutgoingMessage(1, 2, msg1);
+        manager.sendMessage(outgoing1);
+        
+        Map<String, Object> payload2 = new HashMap<>();
+        payload2.put("test", "message2");
+        Message msg2 = new Message(MessageType.STATUS_UPDATE, payload2);
+        OutgoingMessage outgoing2 = new OutgoingMessage(2, 3, msg2);
+        manager.sendMessage(outgoing2);
+        
+        // Process messages
+        manager.processMessages();
+        
+        // Get metrics snapshot
+        CommunicationMetrics.CommunicationMetricsSnapshot snapshot = metrics.getSnapshot();
+        
+        // Validate metrics are non-negative and reasonable
+        assert snapshot.messagesPerSecond >= 0 : "Messages per second should be non-negative";
+        assert snapshot.averageLatency >= 0 : "Average latency should be non-negative";
+        assert snapshot.failureRate >= 0 && snapshot.failureRate <= 1 : "Failure rate should be between 0 and 1";
+        assert snapshot.pendingMessages >= 0 : "Pending messages should be non-negative";
+        assert snapshot.pendingMessages == manager.getPendingMessageCount() : "Pending count should match manager";
+        
+        // Validate individual metric methods
+        double msgsPerSec = metrics.getMessagesPerSecond();
+        double avgLatency = metrics.getAverageLatency();
+        int pending = metrics.getPendingMessageCount();
+        
+        assert msgsPerSec >= 0 : "getMessagesPerSecond should return non-negative value";
+        assert avgLatency >= 0 : "getAverageLatency should return non-negative value";
+        assert pending >= 0 : "getPendingMessageCount should return non-negative value";
+        
+        System.out.println("✓ Performance metrics tests passed");
+        System.out.println("  Snapshot: " + snapshot);
     }
     
     // ===== HELPER METHODS =====
