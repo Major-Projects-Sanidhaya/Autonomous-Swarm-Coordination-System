@@ -153,6 +153,23 @@ public class CommunicationManager {
         
         return connections;
     }
+
+    /**
+     * Gets the partition (connected component) containing the given agent.
+     * This is a convenience wrapper around getNetworkPartitions().
+     *
+     * @param agentId The agent to locate
+     * @return Set of agent IDs in the same partition, or null if not found
+     */
+    public Set<Integer> getPartitionForAgent(int agentId) {
+        List<Set<Integer>> partitions = getNetworkPartitions();
+        for (Set<Integer> partition : partitions) {
+            if (partition.contains(agentId)) {
+                return partition;
+            }
+        }
+        return null;
+    }
     
     public NetworkStatistics getNetworkStatistics() {
         int totalAgents = networkTopology.size();
@@ -193,6 +210,15 @@ public class CommunicationManager {
     
     public void clearPendingMessages() {
         messageQueue.clear();
+    }
+    
+    /**
+     * Get the network simulator instance for accessing configuration.
+     * 
+     * @return The NetworkSimulator instance used by this manager
+     */
+    public NetworkSimulator getNetworkSimulator() {
+        return networkSimulator;
     }
     
     public static class NetworkStatistics {
