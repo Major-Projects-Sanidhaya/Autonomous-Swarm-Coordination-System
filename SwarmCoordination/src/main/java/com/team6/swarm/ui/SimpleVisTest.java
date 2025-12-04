@@ -96,12 +96,13 @@ public class SimpleVisTest extends Application {
     private AgentState createTestAgent(String id, double x, double y, 
                                        AgentStatus status, double battery, 
                                        String role, double heading) {
-        AgentState agent = new AgentState(id);
-        agent.setPosition(new Point2D(x, y));
-        agent.setStatus(status);
-        agent.setBatteryLevel(battery);
-        agent.setRole(role);
-        agent.setHeading(Math.toRadians(heading));
+        AgentState agent = new AgentState();
+        agent.agentId = Integer.parseInt(id.split("-")[1]); // Parse ID from "Agent-1" format
+        agent.agentName = id;
+        agent.position = new Point2D(x, y);
+        agent.status = status;
+        agent.batteryLevel = battery / 100.0; // Convert percentage to 0.0-1.0
+        agent.heading = Math.toRadians(heading);
         return agent;
     }
     

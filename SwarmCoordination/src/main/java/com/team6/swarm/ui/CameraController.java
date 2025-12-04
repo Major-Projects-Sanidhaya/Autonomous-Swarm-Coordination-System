@@ -110,8 +110,8 @@ public class CameraController {
      * Transform world coordinates to screen coordinates
      */
     public Point2D worldToScreen(Point2D world, double canvasWidth, double canvasHeight) {
-        double screenX = (world.getX() + offsetX) * zoom + canvasWidth / 2;
-        double screenY = (world.getY() + offsetY) * zoom + canvasHeight / 2;
+        double screenX = (world.x + offsetX) * zoom + canvasWidth / 2;
+        double screenY = (world.y + offsetY) * zoom + canvasHeight / 2;
         return new Point2D(screenX, screenY);
     }
     
@@ -119,8 +119,8 @@ public class CameraController {
      * Transform screen coordinates to world coordinates
      */
     public Point2D screenToWorld(Point2D screen, double canvasWidth, double canvasHeight) {
-        double worldX = (screen.getX() - canvasWidth / 2) / zoom - offsetX;
-        double worldY = (screen.getY() - canvasHeight / 2) / zoom - offsetY;
+        double worldX = (screen.x - canvasWidth / 2) / zoom - offsetX;
+        double worldY = (screen.y - canvasHeight / 2) / zoom - offsetY;
         return new Point2D(worldX, worldY);
     }
     
@@ -131,8 +131,8 @@ public class CameraController {
         if (followMode && followTarget != null) {
             // Smooth follow
             double smoothing = 0.1;
-            offsetX += (followTarget.getX() - offsetX) * smoothing;
-            offsetY += (followTarget.getY() - offsetY) * smoothing;
+            offsetX += (followTarget.x - offsetX) * smoothing;
+            offsetY += (followTarget.y - offsetY) * smoothing;
         }
     }
     

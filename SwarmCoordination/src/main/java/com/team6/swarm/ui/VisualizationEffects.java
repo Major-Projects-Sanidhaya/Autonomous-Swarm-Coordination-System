@@ -38,7 +38,7 @@ public class VisualizationEffects {
             gc.setStroke(new Color(0.5, 0.5, 1.0, 0.3));
             gc.setLineWidth(2.0);
             gc.setLineDashes(5, 5);
-            gc.strokeOval(target.getX() - 8, target.getY() - 8, 16, 16);
+            gc.strokeOval(target.x - 8, target.y - 8, 16, 16);
             gc.setLineDashes(null);
         }
     }
@@ -127,8 +127,8 @@ public class VisualizationEffects {
                                             baseColor.getBlue(), opacity * 0.5);
                 gc.setStroke(trailColor);
                 gc.setLineWidth(2.0);
-                gc.strokeLine(pointArray[i].pos.getX(), pointArray[i].pos.getY(),
-                            pointArray[i + 1].pos.getX(), pointArray[i + 1].pos.getY());
+                gc.strokeLine(pointArray[i].pos.x, pointArray[i].pos.y,
+                            pointArray[i + 1].pos.x, pointArray[i + 1].pos.y);
             }
         }
         
@@ -158,7 +158,7 @@ public class VisualizationEffects {
             double opacity = Math.max(0, 1.0 - (lifetime / MAX_LIFETIME));
             gc.setStroke(new Color(0.3, 0.6, 1.0, opacity));
             gc.setLineWidth(2.0);
-            gc.strokeOval(origin.getX() - radius, origin.getY() - radius, 
+            gc.strokeOval(origin.x - radius, origin.y - radius, 
                          radius * 2, radius * 2);
         }
         
@@ -191,11 +191,11 @@ public class VisualizationEffects {
             // Red circle
             gc.setStroke(new Color(1, 0, 0, opacity));
             gc.setLineWidth(4.0);
-            gc.strokeOval(location.getX() - 20, location.getY() - 20, 40, 40);
+            gc.strokeOval(location.x - 20, location.y - 20, 40, 40);
             
             // Alert icon
             gc.setFill(new Color(1, 0, 0, opacity));
-            gc.fillText("⚠", location.getX() - 10, location.getY() + 5);
+            gc.fillText("⚠", location.x - 10, location.y + 5);
         }
         
         boolean isExpired() {

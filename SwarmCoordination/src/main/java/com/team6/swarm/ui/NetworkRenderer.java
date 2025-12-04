@@ -36,23 +36,26 @@ public class NetworkRenderer {
     /**
      * Draw communication links between agents
      */
-    public void drawCommunicationLinks(GraphicsContext gc, List<ConnectionInfo> connections) {
+    public void drawCommunicationLinks(GraphicsContext gc, List<ConnectionInfo> connections, 
+                                      Map<Integer, Point2D> agentPositions) {
         if (!showCommunicationLinks || connections == null) {
             return;
         }
         
         for (ConnectionInfo conn : connections) {
-            drawConnection(gc, conn);
+            drawConnection(gc, conn, agentPositions);
         }
     }
     
     /**
      * Draw a single connection
+     * Note: Requires agent positions to be passed separately since ConnectionInfo only has agent IDs
      */
-    private void drawConnection(GraphicsContext gc, ConnectionInfo conn) {
-        Point2D from = conn.getFromPosition();
-        Point2D to = conn.getToPosition();
-        double strength = conn.getSignalStrength();
+    private void drawConnection(GraphicsContext gc, ConnectionInfo conn, Map<Integer, Point2D> agentPositions) {
+        Point2D from = agentPositions.get(conn.agentA);
+        Point2D to = agentPositions.get(conn.agentB);
+        if (from == null || to == null) return;
+        double strength = conn.strength;
         
         // Determine line properties based on signal strength
         Color lineColor;
@@ -86,7 +89,7 @@ public class NetworkRenderer {
             gc.setLineDashes(5, 5);
         }
         
-        gc.strokeLine(from.getX(), from.getY(), to.getX(), to.getY());
+        gc.strokeLine(from.x, from.y, to.x, to.y);
         
         if (dashed) {
             gc.setLineDashes(null); // Reset
@@ -152,7 +155,7 @@ public class NetworkRenderer {
         gc.setLineWidth(1.0);
         gc.setLineDashes(3, 3);
         
-        gc.strokeOval(position.getX() - range, position.getY() - range,
+        gc.strokeOval(position.x - range, position.y - range,
                      range * 2, range * 2);
         
         gc.setLineDashes(null);
@@ -165,7 +168,7 @@ public class NetworkRenderer {
         gc.setStroke(new Color(0.3, 0.6, 1.0, opacity));
         gc.setLineWidth(2.0);
         
-        gc.strokeOval(origin.getX() - radius, origin.getY() - radius,
+        gc.strokeOval(origin.x - radius, origin.y - radius,
                      radius * 2, radius * 2);
     }
     
@@ -203,8 +206,8 @@ public class NetworkRenderer {
         
         void update(double deltaTime) {
             double distance = Math.sqrt(
-                Math.pow(toPos.getX() - fromPos.getX(), 2) +
-                Math.pow(toPos.getY() - fromPos.getY(), 2)
+                Math.pow(toPos.x - fromPos.x, 2) +
+                Math.pow(toPos.y - fromPos.y, 2)
             );
             
             double progressIncrement = (MESSAGE_SPEED * deltaTime) / distance;
@@ -217,8 +220,8 @@ public class NetworkRenderer {
         
         void render(GraphicsContext gc) {
             // Interpolate position
-            double currentX = fromPos.getX() + (toPos.getX() - fromPos.getX()) * progress;
-            double currentY = fromPos.getY() + (toPos.getY() - fromPos.getY()) * progress;
+            double currentX = fromPos.x + (toPos.x - fromPos.x) * progress;
+            double currentY = fromPos.y + (toPos.y - fromPos.y) * progress;
             
             // Draw message icon
             gc.setFill(color);
@@ -242,7 +245,7 @@ public class NetworkRenderer {
                 return Color.GRAY;
             }
             
-            return switch (msg.getType()) {
+            return switch (msg.type) {
                 case POSITION_UPDATE -> Color.BLUE;
                 case VOTE_REQUEST, VOTE_RESPONSE -> Color.PURPLE;
                 case TASK_ASSIGNMENT -> Color.ORANGE;

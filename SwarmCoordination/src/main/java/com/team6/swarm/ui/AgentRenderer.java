@@ -42,11 +42,11 @@ public class AgentRenderer {
     public void drawAgent(GraphicsContext gc, AgentState agent) {
         if (agent == null) return;
         
-        double x = agent.getPosition().getX();
-        double y = agent.getPosition().getY();
+        double x = agent.position.x;
+        double y = agent.position.y;
         
         // Get or initialize opacity for fade effects
-        String agentId = agent.getId();
+        String agentId = String.valueOf(agent.agentId);
         agentOpacity.putIfAbsent(agentId, 1.0);
         double opacity = agentOpacity.get(agentId);
         
@@ -59,7 +59,7 @@ public class AgentRenderer {
         drawTrail(gc, agentId, opacity);
         
         // Draw agent body
-        Color agentColor = getStatusColor(agent.getStatus());
+        Color agentColor = getStatusColor(agent.status);
         gc.setFill(withOpacity(agentColor, opacity));
         gc.fillOval(x - AGENT_RADIUS, y - AGENT_RADIUS, 
                     AGENT_RADIUS * 2, AGENT_RADIUS * 2);
@@ -74,15 +74,15 @@ public class AgentRenderer {
         drawDirectionArrow(gc, agent, opacity);
         
         // Draw battery indicator
-        drawBatteryIndicator(gc, x, y, agent.getBatteryLevel(), opacity);
+        drawBatteryIndicator(gc, x, y, agent.batteryLevel * 100, opacity);
         
         // Draw selection highlight
         if (agentId.equals(selectedAgentId)) {
             drawSelectionHighlight(gc, x, y, opacity);
         }
         
-        // Draw role icon
-        drawRoleIcon(gc, x, y, agent.getRole(), opacity);
+        // Draw role icon (role would need to be added to AgentState or tracked separately)
+        // drawRoleIcon(gc, x, y, "", opacity);
         
         // Draw label
         drawAgentLabel(gc, agent, opacity);
@@ -96,9 +96,9 @@ public class AgentRenderer {
                                    boolean showTrail) {
         if (agent == null) return;
         
-        String agentId = agent.getId();
-        double x = agent.getPosition().getX();
-        double y = agent.getPosition().getY();
+        String agentId = String.valueOf(agent.agentId);
+        double x = agent.position.x;
+        double y = agent.position.y;
         
         // Update trail
         if (showTrail) {
@@ -113,9 +113,9 @@ public class AgentRenderer {
      * Draw direction arrow showing agent heading
      */
     private void drawDirectionArrow(GraphicsContext gc, AgentState agent, double opacity) {
-        double x = agent.getPosition().getX();
-        double y = agent.getPosition().getY();
-        double angle = agent.getHeading(); // Assuming heading in radians
+        double x = agent.position.x;
+        double y = agent.position.y;
+        double angle = agent.heading; // heading in radians
         
         double endX = x + Math.cos(angle) * DIRECTION_ARROW_LENGTH;
         double endY = y + Math.sin(angle) * DIRECTION_ARROW_LENGTH;
@@ -222,18 +222,18 @@ public class AgentRenderer {
      * Draw agent label with ID and status
      */
     private void drawAgentLabel(GraphicsContext gc, AgentState agent, double opacity) {
-        double x = agent.getPosition().getX();
-        double y = agent.getPosition().getY();
+        double x = agent.position.x;
+        double y = agent.position.y;
         
         gc.setFill(withOpacity(Color.BLACK, opacity));
         gc.setFont(new Font("Arial", 10));
         gc.setTextAlign(TextAlignment.CENTER);
         
-        String label = agent.getId();
+        String label = agent.agentName != null ? agent.agentName : String.valueOf(agent.agentId);
         gc.fillText(label, x, y - AGENT_RADIUS - 5);
         
         // Battery percentage below
-        String battery = String.format("%.0f%%", agent.getBatteryLevel());
+        String battery = String.format("%.0f%%", agent.batteryLevel * 100);
         gc.setFont(new Font("Arial", 8));
         gc.fillText(battery, x, y + AGENT_RADIUS + 12);
     }
