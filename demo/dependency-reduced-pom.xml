@@ -60,6 +60,6 @@
     <main.class>com.team6.swarm.demo.SwarmDemo</main.class>
     <maven.compiler.source>11</maven.compiler.source>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <javafx.version>17.0.2</javafx.version>
+    <javafx.version>21.0.2</javafx.version>
   </properties>
 </project>
