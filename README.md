@@ -1,350 +1,120 @@
-# Anthony's UI & Integration Component
+# ASCS Demo - Quick Start Guide
 
-## Overview
+Get the swarm visualization running in under 5 minutes!
 
-This package contains the User Interface and System Integration components for the Distributed Multi-Agent System. Anthony's section is responsible for:
+## Demo Videos
 
-1. **Ground Control Interface** - Mission planning and monitoring
-2. **Real-Time Visualization** - Display agents, communications, and decisions
-3. **System Integration** - Ensure all components work together seamlessly
-4. **User Experience** - Intuitive controls and clear information display
+### ASCS Swarm Demo – Part 1
+[![ASCS Demo 1](https://img.youtube.com/vi/0_-gDewSZR0/0.jpg)](https://www.youtube.com/watch?v=0_-gDewSZR0)
 
-## Architecture
+### ASCS Swarm Demo – Part 2
+[![ASCS Demo 2](https://img.youtube.com/vi/bxMr93_Z11g/0.jpg)](https://www.youtube.com/watch?v=bxMr93_Z11g)
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    ANTHONY'S UI LAYER                        │
-├─────────────────────────────────────────────────────────────┤
-│                                                               │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ MainInterface│  │  Visualizer  │  │ ControlPanel │      │
-│  │   (JavaFX)   │  │  (Graphics)  │  │  (Controls)  │      │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘      │
-│         │                  │                  │              │
-│         └──────────────────┼──────────────────┘              │
-│                            │                                 │
-│                   ┌────────▼────────┐                        │
-│                   │ SystemController│                        │
-│                   │  (Integration)  │                        │
-│                   └────────┬────────┘                        │
-│                            │                                 │
-│         ┌──────────────────┼──────────────────┐             │
-│         │                  │                  │             │
-│    ┌────▼────┐      ┌─────▼─────┐      ┌────▼────┐        │
-│    │Sanidhaya│      │   John    │      │ Lauren  │        │
-│    │  Core   │      │   Comm    │      │  Intel  │        │
-│    └─────────┘      └───────────┘      └─────────┘        │
-│                                                               │
-└─────────────────────────────────────────────────────────────┘
+
+## Prerequisites
+
+**Required:**
+- Java 11 or higher ([Download](https://adoptium.net/))
+
+**Optional (but recommended):**
+- Maven 3.6+ ([Download](https://maven.apache.org/download.cgi))
+
+---
+
+## Method 1: Using Maven (Easiest)
+
+If you have Maven installed:
+
+```bash
+cd demo
+mvn clean javafx:run
 ```
 
-## Components Implemented
+**That's it!** The demo window should appear.
 
-### Phase 1: Core Data Structures ✅ COMPLETED
+---
 
-#### 1. **SystemCommand.java**
-- Encapsulates user commands from UI to system
-- Supports all command types (spawn, remove, configure, etc.)
-- Includes validation and execution tracking
-- Provides convenience methods for common commands
+## Method 2: Without Maven
 
-**Key Features:**
-- Command validation
-- Parameter management
-- Execution tracking
-- Priority handling
-- Command history
+If you don't have Maven:
 
-**Usage Example:**
-```java
-SystemCommand cmd = SystemCommand.spawnAgent(new Point2D(100, 100), 50.0);
-systemController.executeCommand(cmd);
+### Step 1: Download JavaFX
+
+1. Go to https://gluonhq.com/products/javafx/
+2. Download JavaFX SDK for your OS
+3. Extract it somewhere (e.g., `~/javafx-sdk-17`)
+
+### Step 2: Compile and Run
+
+```bash
+cd demo
+./compile.sh /path/to/javafx-sdk-17/lib
+./run-compiled.sh
 ```
 
-#### 2. **CommandType.java**
-- Enum defining all possible system commands
-- Organized by category (agent, simulation, navigation, etc.)
-- Provides display names and category information
-- Supports command filtering and routing
+Or manually:
 
-**Categories:**
-- Agent Management (spawn, remove, configure)
-- Simulation Control (start, stop, reset)
-- Navigation (waypoints, targets)
-- Formation Control (set, break, rotate)
-- Decision Making (voting, consensus)
-- Configuration (boundaries, parameters)
-- Emergency (stop, scatter, gather)
-- Monitoring (export, snapshot, recording)
+```bash
+# Compile
+javac --module-path /path/to/javafx-sdk/lib \
+      --add-modules javafx.controls \
+      -d out \
+      src/main/java/com/team6/swarm/demo/*.java
 
-#### 3. **BehaviorConfiguration.java**
-- Algorithm parameter settings for flocking and swarm behavior
-- Runtime tuning of weights, radii, and thresholds
-- Preset configurations (tight, loose, emergency, fast)
-- Parameter validation and clamping
-
-**Parameters:**
-- Flocking weights (separation, alignment, cohesion)
-- Flocking radii (detection distances)
-- Movement parameters (speed, force, target weight)
-- Decision parameters (consensus, voting timeout)
-- Formation parameters (spacing, stiffness, damping)
-
-**Presets:**
-- Tight Formation - High coordination
-- Loose Exploration - Independent movement
-- Emergency Scatter - Maximum dispersion
-- Fast Pursuit - High speed tracking
-
-#### 4. **NetworkConfiguration.java**
-- Communication system settings and parameters
-- Network simulation (latency, packet loss, duplicates)
-- Topology management (range, neighbors, multihop)
-- Reliability settings (retransmission, error correction)
-
-**Parameters:**
-- Range parameters (max range, signal strength, decay)
-- Message parameters (size, timeout, queue, priority)
-- Network simulation (latency, packet loss, duplicates)
-- Topology parameters (update frequency, max neighbors, multihop)
-- Reliability parameters (retransmission, ACK timeout)
-
-**Presets:**
-- Ideal Network - Perfect communication
-- Realistic Network - Normal conditions
-- Degraded Network - Stress testing
-- Short Range - Forces multihop routing
-- High Reliability - Mission critical
-
-#### 5. **DecisionStatus.java**
-- Real-time voting and decision-making progress
-- Vote breakdown and consensus tracking
-- Participation monitoring
-- Timing and deadline management
-
-**Information Provided:**
-- Proposal details (question, options, type)
-- Voting progress (votes received, required, percentage)
-- Vote breakdown (counts, percentages, leading option)
-- Consensus status (reached, threshold, winning option)
-- Timing (start time, deadline, time remaining)
-- Participation (voters, abstentions, non-responders)
-
-**States:**
-- PENDING - Voting in progress
-- CONSENSUS_REACHED - Decision made
-- TIMEOUT - Deadline passed
-- CANCELLED - Vote aborted
-
-#### 6. **NetworkStatus.java**
-- Network topology visualization data
-- Connectivity metrics and health indicators
-- Performance tracking
-- Activity monitoring
-
-**Metrics:**
-- Topology (connections, neighbors, density, diameter)
-- Connectivity (isolated agents, partitions)
-- Performance (latency, packet loss, throughput)
-- Health (overall score, weak links, critical agents)
-- Activity (recent messages, busy/idle agents)
-
-**Visualization Modes:**
-- Topology View - Show all connections
-- Activity View - Animate message flow
-- Health View - Color by connectivity
-- Performance View - Show latency heatmap
-
-#### 7. **UIConfiguration.java**
-- User interface settings and preferences
-- Visualization options and themes
-- Performance settings
-- Interaction controls
-
-**Settings Categories:**
-- Display (window size, canvas size, background, grid)
-- Agent Visualization (size, labels, trails, colors)
-- Network Visualization (links, signal strength, animation)
-- Decision Visualization (voting progress, consensus)
-- Performance (frame rate, antialiasing, shadows)
-- Interaction (waypoints, selection, zoom, pan)
-- Information Display (panels, metrics, tooltips)
-- Theme (light, dark, high contrast)
-
-**Presets:**
-- Presentation Mode - High quality for demos
-- Development Mode - Detailed information
-- Performance Mode - Minimal graphics
-- Minimal Mode - Basic visualization
-
-## Data Flow
-
-### Command Flow (User → System)
-```
-User Action → ControlPanel → SystemCommand → SystemController → EventBus → Components
+# Run
+java --module-path /path/to/javafx-sdk/lib \
+     --add-modules javafx.controls \
+     -cp out \
+     com.team6.swarm.demo.SwarmDemo
 ```
 
-### Visualization Flow (System → User)
-```
-Components → EventBus → UIEventHandler → DataAggregator → Visualizer → Display
-```
+---
 
-### Configuration Flow (User → System)
-```
-User Adjustment → ParameterPanel → Configuration Object → EventBus → Target Component
-```
+## What to Do Once Running
 
-## Integration Points
+### Try These in Order:
 
-### With Sanidhaya's Core System
-- **Sends:** SystemCommand (spawn, remove, configure agents)
-- **Receives:** VisualizationUpdate (agent positions, status)
-- **Uses:** AgentState, Point2D, Vector2D, EventBus
+1. **Watch the initial swarm** - 12 agents flocking naturally
+2. **Click "A: Basic Flocking"** - See emergent behavior
+3. **Adjust sliders** - Change separation/alignment/cohesion
+4. **Click on canvas** - Set waypoints for all agents
+5. **Click "B: Consensus Vote"** - Watch democratic decision-making
+6. **Click "C: Network Degradation"** - See resilience in action
+7. **Click "D: Formation Flying"** - Automated formation sequence
 
-### With John's Communication System
-- **Sends:** NetworkConfiguration (range, latency, packet loss)
-- **Receives:** NetworkStatus (connections, topology, health)
-- **Uses:** ConnectionInfo, Message, MessageType
+### Interactive Controls:
 
-### With Lauren's Intelligence System
-- **Sends:** BehaviorConfiguration (flocking weights, parameters)
-- **Receives:** DecisionStatus (voting progress, consensus)
-- **Uses:** VoteProposal, VoteResult, FlockingParameters
+- **Spawn/Remove Agent buttons** - Add or remove drones
+- **Formation buttons** - Instant formation changes
+- **Network Quality slider** - Simulate communication issues
+- **Click canvas** - Set target waypoints
+- **Flocking sliders** - Tune behavior weights in real-time
 
-## Event System
+---
 
-All components communicate through the EventBus using a publish-subscribe pattern:
+## Troubleshooting
 
-```java
-// Subscribe to events
-eventBus.subscribe(VisualizationUpdate.class, update -> {
-    visualizer.updateAgentDisplay(update.allAgents);
-});
+### "Module javafx.controls not found"
+→ Install JavaFX SDK or use Maven method
 
-// Publish events
-eventBus.publish(new SystemCommand(CommandType.SPAWN_AGENT));
-```
+### "Command not found: mvn"
+→ Use Method 2 (without Maven)
 
-## Next Steps (Phases 2-5)
+### "No JavaFX runtime found"
+→ Make sure you're using `--module-path` and `--add-modules` flags
 
-### Phase 2: Core UI Components
-- MainInterface - JavaFX application setup
-- Visualizer - Canvas-based agent rendering
-- ControlPanel - User controls and buttons
-- SystemController - Command routing
-- StatusPanel - System information display
-- MissionPanel - Mission planning interface
+### Slow performance
+→ Reduce number of agents or disable communication links
 
-### Phase 3: Advanced UI Features
-- WaypointManager - Interactive waypoint placement
-- ParameterPanel - Real-time parameter tuning
-- NetworkVisualization - Communication link display
-- DecisionVisualization - Voting process animation
-- PerformanceMonitor - FPS, latency, metrics
-- AgentInspector - Individual agent details
+---
 
-### Phase 4: Integration & Event Handling
-- UIEventHandler - Event routing and processing
-- CommandDispatcher - Command validation and dispatch
-- DataAggregator - Collect data from all components
-- UpdateScheduler - Manage update frequency
+## Next Steps
 
-### Phase 5: Testing & Documentation
-- UITest - Unit tests for UI components
-- IntegrationTest - Full system integration tests
-- Demo scenarios - Example missions
-- User documentation - How to use the system
+- Read the full [README.md](README.md) for detailed explanations
+- Explore the code in `src/main/java/com/team6/swarm/demo/`
+- Integrate concepts into the main ASCS project
 
-## Development Guidelines
+---
 
-### Code Style
-- Follow Java naming conventions
-- Use comprehensive JavaDoc comments
-- Include usage examples in documentation
-- Validate all user inputs
-- Handle errors gracefully
+**Enjoy watching your autonomous swarm! 🚁✨**
 
-### Performance Considerations
-- Target 60 FPS for smooth visualization
-- Use efficient data structures
-- Minimize object creation in render loop
-- Cache frequently accessed data
-- Profile and optimize bottlenecks
-
-### Testing Strategy
-- Unit test each component independently
-- Integration test component interactions
-- Test with various swarm sizes (1, 5, 10, 20+ agents)
-- Test edge cases (no agents, network failures, etc.)
-- Performance test with maximum agent count
-
-## Dependencies
-
-### External Libraries
-- JavaFX - UI framework
-- Java 11+ - Language features
-
-### Internal Dependencies
-- com.team6.swarm.core - Core agent system
-- com.team6.swarm.communication - Communication system
-- com.team6.swarm.intelligence - Intelligence algorithms
-
-## File Structure
-
-```
-ui/
-├── README.md                      # This file
-├── TODO.md                        # Progress tracking
-│
-├── SystemCommand.java             # User commands
-├── CommandType.java               # Command types enum
-├── BehaviorConfiguration.java     # Algorithm settings
-├── NetworkConfiguration.java      # Network settings
-├── DecisionStatus.java            # Voting progress
-├── NetworkStatus.java             # Network topology
-├── UIConfiguration.java           # UI preferences
-│
-├── MainInterface.java             # Main application (Phase 2)
-├── Visualizer.java                # Graphics rendering (Phase 2)
-├── ControlPanel.java              # User controls (Phase 2)
-├── SystemController.java          # Integration hub (Phase 2)
-├── StatusPanel.java               # Status display (Phase 2)
-├── MissionPanel.java              # Mission planning (Phase 2)
-│
-├── WaypointManager.java           # Waypoint management (Phase 3)
-├── ParameterPanel.java            # Parameter tuning (Phase 3)
-├── NetworkVisualization.java      # Network display (Phase 3)
-├── DecisionVisualization.java     # Voting display (Phase 3)
-├── PerformanceMonitor.java        # Metrics display (Phase 3)
-├── AgentInspector.java            # Agent details (Phase 3)
-│
-├── UIEventHandler.java            # Event handling (Phase 4)
-├── CommandDispatcher.java         # Command routing (Phase 4)
-├── DataAggregator.java            # Data collection (Phase 4)
-├── UpdateScheduler.java           # Update management (Phase 4)
-│
-├── UITest.java                    # UI tests (Phase 5)
-└── IntegrationTest.java           # Integration tests (Phase 5)
-```
-
-## Progress
-
-- **Phase 1:** ✅ 7/7 files (100%) - Core Data Structures
-- **Phase 2:** ⏳ 0/6 files (0%) - Core UI Components
-- **Phase 3:** ⏳ 0/6 files (0%) - Advanced UI Features
-- **Phase 4:** ⏳ 0/4 files (0%) - Integration & Event Handling
-- **Phase 5:** ⏳ 0/4 files (0%) - Testing & Documentation
-- **Overall:** 7/27 files (26%)
-
-## Contact
-
-**Component Owner:** Anthony
-**Role:** User Interface & Integration
-**Responsibilities:** Ground Control, Visualization, System Integration, User Experience
-
-## References
-
-- Technical Specification Document - Section 4.4 (Anthony's Component)
-- System Architecture - Section 2 (Component Overview)
-- Integration Interfaces - Section 5 (Message Formats)
-- Development Timeline - Section 6 (Phase Schedule)
